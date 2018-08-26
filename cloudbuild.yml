@@ -1,5 +1,9 @@
 steps:
-- name: gcr.io/cloud-builders/gcloud
-  args: ['compute', 'tpus', 'create', "$PROJECT_ID-tpu", '--network=default', '--range=10.240.1.0/29', '--version=1.9', '--zone=us-central1-f', '--preemptible']
-- name: gcr.io/cloud-builders/gcloud
-  args: ['compute', 'tpus', 'delete', "$PROJECT_ID-tpu", '--zone=us-central1-f']
+- name: 'gcr.io/cloud-builders/kubectl'
+  args:
+  - 'create'
+  - '-f'
+  - 'job.yml'
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=cluster-1'
