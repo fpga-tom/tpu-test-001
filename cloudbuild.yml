@@ -1,5 +1,5 @@
 steps:
 - name: gcr.io/$PROJECT_ID/remote-builder
   env:
-    - COMMAND=gcloud compute tpus create $PROJECT_ID-tpu --network=default --range=10.240.1.0/29 --version=1.9 --zone=us-central1-f --preemptible=true
+    - COMMAND=gcloud compute tpus create $PROJECT_ID-tpu --network=default --range=10.240.1.0/29 --version=1.9 --zone=us-central1-f --preemptible
     - ZONE=us-central1-f
