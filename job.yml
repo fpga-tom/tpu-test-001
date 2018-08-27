@@ -21,7 +21,7 @@ spec:
         - python3
         - tpu_test.py
         - --data_dir=gs://tomaskrajco-tpu-test-001-bucket/data
-        - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/resnet
+        - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/mnist
         resources:
           limits:
             # Request a single v2-8 Preemptible Cloud TPU device to train the model.
