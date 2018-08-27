@@ -19,7 +19,7 @@ spec:
         image: gcr.io/tpu-test-001/mnist-tpu-image
         command:
         - python
-        - /mnist/tpu_test.py
+        - tpu_test.py
         - --data_dir=gs://tomaskrajco-tpu-test-001-bucket/data
         - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/resnet
         resources:
