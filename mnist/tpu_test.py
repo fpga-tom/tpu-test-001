@@ -1,3 +1,24 @@
+# Copyright 2017 The TensorFlow Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+"""MNIST model training using TPUs.
+
+This program demonstrates training of the convolutional neural network model
+defined in mnist.py on Google Cloud TPUs (https://cloud.google.com/tpu/).
+
+If you are not interested in TPUs, you should ignore this file.
+"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -10,8 +31,8 @@ import tensorflow as tf  # pylint: disable=g-bad-import-order
 # For open source environment, add grandparent directory for import
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(sys.path[0]))))
 
-import mnist
-import dataset
+from official.mnist import dataset  # pylint: disable=wrong-import-position
+from official.mnist import mnist  # pylint: disable=wrong-import-position
 
 # Cloud TPU Cluster Resolver flags
 tf.flags.DEFINE_string(
@@ -50,10 +71,12 @@ tf.flags.DEFINE_integer("num_shards", 8, "Number of shards (TPU chips).")
 
 FLAGS = tf.flags.FLAGS
 
+
 def metric_fn(labels, logits):
   accuracy = tf.metrics.accuracy(
       labels=labels, predictions=tf.argmax(logits, axis=1))
   return {"accuracy": accuracy}
+
 
 def model_fn(features, labels, mode, params):
   """model_fn constructs the ML model used to predict handwritten digits."""
@@ -87,6 +110,7 @@ def model_fn(features, labels, mode, params):
     return tf.contrib.tpu.TPUEstimatorSpec(
         mode=mode, loss=loss, eval_metrics=(metric_fn, [labels, logits]))
 
+
 def train_input_fn(params):
   """train_input_fn defines the input pipeline used for training."""
   batch_size = params["batch_size"]
@@ -108,6 +132,7 @@ def eval_input_fn(params):
       tf.contrib.data.batch_and_drop_remainder(batch_size))
   images, labels = ds.make_one_shot_iterator().get_next()
   return images, labels
+
 
 def main(argv):
   del argv  # Unused.
@@ -146,6 +171,7 @@ def main(argv):
   # So if you change --batch_size then change --eval_steps too.
   if FLAGS.eval_steps:
     estimator.evaluate(input_fn=eval_input_fn, steps=FLAGS.eval_steps)
+
 
 if __name__ == "__main__":
   tf.app.run()
