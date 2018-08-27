@@ -1,7 +1,14 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import tensorflow as tf
+
+import os
+import sys
+
+import tensorflow as tf  # pylint: disable=g-bad-import-order
+
+# For open source environment, add grandparent directory for import
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(sys.path[0]))))
 
 import mnist
 import dataset
