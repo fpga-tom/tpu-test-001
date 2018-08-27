@@ -16,11 +16,11 @@ spec:
       - name: mnist-tpu
         # The official TensorFlow 1.9 TPU model image built from
         # https://github.com/tensorflow/tpu/blob/r1.9/tools/docker/Dockerfile.
-        image: gcr.io/$PROJECT_ID/mnist-tpu-image
+        image: gcr.io/tpu-test-001/mnist-tpu-image
         command:
         - python
         - /mnist/tpu_test.py
-        - --data_dir=gs://tomaskrajco-tpu-test-001/data
+        - --data_dir=gs://tomaskrajco-tpu-test-001-bucket/data
         - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/resnet
         resources:
           limits:
