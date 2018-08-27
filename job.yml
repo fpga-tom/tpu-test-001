@@ -18,7 +18,7 @@ spec:
         # https://github.com/tensorflow/tpu/blob/r1.9/tools/docker/Dockerfile.
         image: gcr.io/tpu-test-001/mnist-tpu-image
         command:
-        - python
+        - python3
         - tpu_test.py
         - --data_dir=gs://tomaskrajco-tpu-test-001-bucket/data
         - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/resnet
