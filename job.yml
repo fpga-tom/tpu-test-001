@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: resnet-tpu
+  name: mnist-tpu
 spec:
   template:
     metadata:
@@ -13,14 +13,14 @@ spec:
     spec:
       restartPolicy: Never
       containers:
-      - name: resnet-tpu
+      - name: mnist-tpu
         # The official TensorFlow 1.9 TPU model image built from
         # https://github.com/tensorflow/tpu/blob/r1.9/tools/docker/Dockerfile.
-        image: gcr.io/tensorflow/tpu-models:r1.9
+        image: gcr.io/$PROJECT_ID/mnist-tpu-image
         command:
         - python
-        - /tensorflow_tpu_models/models/official/resnet/resnet_main.py
-        - --data_dir=gs://cloud-tpu-test-datasets/fake_imagenet
+        - /mnist/tpu_test.py
+        - --data_dir=gs://tomaskrajco-tpu-test-001/data
         - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/resnet
         resources:
           limits:

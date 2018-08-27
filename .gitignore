@@ -1,0 +1,4 @@
+mnist/venv
+**/__pycache__
+*.pyc
+**.pye
