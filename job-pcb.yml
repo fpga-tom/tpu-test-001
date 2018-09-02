@@ -24,7 +24,7 @@ spec:
         - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/pcb
         - --use_tpu=True
         - --iterations=500
-        - --train_steps=20000
+        - --train_steps=40000
         resources:
           limits:
             # Request a single v2-8 Preemptible Cloud TPU device to train the model.
