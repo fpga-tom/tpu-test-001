@@ -20,7 +20,7 @@ spec:
         command:
         - python3
         - xor.py
-        - --data_dir=gs://tomaskrajco-tpu-test-001-bucket/data
+        - --data_file=gs://tomaskrajco-tpu-test-001-bucket/data/data.csv
         - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/pcb
         - --use_tpu=True
         - --iterations=20000
