@@ -1,14 +1,14 @@
 # tpu cloud build 16
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/mnist-tpu-image', '.' ]
+  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/pcb-tpu-image', '.' ]
 
 - name: 'gcr.io/cloud-builders/kubectl'
   args:
   - 'create'
   - '-f'
-  - 'job.yml'
+  - 'job-pcb.yml'
   env:
   - 'CLOUDSDK_COMPUTE_ZONE=us-central1-b'
   - 'CLOUDSDK_CONTAINER_CLUSTER=cluster-1'
-images: [ 'gcr.io/$PROJECT_ID/mnist-tpu-image' ]
+images: [ 'gcr.io/$PROJECT_ID/pcb-tpu-image' ]

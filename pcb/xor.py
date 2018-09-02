@@ -17,17 +17,44 @@ tf.flags.DEFINE_string("data_file", default="./data.csv", help="Input data file"
 FLAGS = tf.flags.FLAGS
 
 
-COLUMNS=['a','b','label']
-feature_columns = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-1]]
+COLUMNS=['a0','a1','a2','a3','a4','a5','a6','a7',
+        'b0','b1','b2','b3','b4','b5','b6','b7',
+        'l0','l1','l2','l3','l4','l5','l6','l7']
+
+feature_columns = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-8]]
 
 def model_fn(features, labels, mode, params):
     del params
 
-    input_layer = tf.feature_column.input_layer(features, feature_columns)
-    dense0 = tf.layers.dense(input_layer, 8, activation=tf.tanh, name="dense0")
-    dense1 = tf.layers.dense(dense0, 1, activation=tf.sigmoid, name="dense1")
+    nodes = 8
+    edges = (nodes**2 - nodes) / 2
 
-    loss = tf.reduce_mean(tf.losses.mean_squared_error(labels=labels, predictions=dense1))
+    alpha = tf.get_variable("alpha", dtype=tf.float32, shape=[5,edges])
+    sa = tf.nn.softmax(alpha)
+
+    dense = {0: tf.feature_column.input_layer(features, feature_columns)}
+    count = 0
+    mapping = {}
+    for i in range(0,nodes):
+        for j in range(i+1, nodes):
+            dense00 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
+            dense10 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
+            dense20 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
+            dense30 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
+            dense40 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
+            if (i,j) not in mapping:
+                mapping[(i,j)] = count
+                count += 1
+            out0 = sa[0,mapping[(i,j)]] * dense00 + sa[1,mapping[(i,j)]] * dense10 + sa[2,mapping[(i,j)]] * dense20 +  sa[3,mapping[(i,j)]] * dense00 + sa[4,mapping[(i,j)]]
+            if j not in dense:
+                dense[j] = out0
+            else:
+                dense[j] += out0
+
+
+    output_layer = tf.layers.dense(dense[nodes-1], 8, activation=tf.tanh, name="output_layer")
+
+    loss = tf.reduce_mean(tf.losses.mean_squared_error(labels=labels, predictions=output_layer))
 
     if mode == tf.estimator.ModeKeys.TRAIN:
         learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,
@@ -40,17 +67,20 @@ def model_fn(features, labels, mode, params):
             )
 
 def _parse_line(line):
-    FIELD_DEFAULTS=[[0.],[0.],[0.]]
+    FIELD_DEFAULTS=[[0.],[0.],[0.],[0.],[0.],[0.],[0.],[0.],
+                    [0.],[0.],[0.],[0.],[0.],[0.],[0.],[0.],
+                    [0.],[0.],[0.],[0.],[0.],[0.],[0.],[0.]
+            ]
     fields = tf.decode_csv(line, FIELD_DEFAULTS)
     features = dict(zip(COLUMNS, fields))
-    label = features.pop('label')
-    return features, tf.reshape(label, [1])
+    label = [features.pop('l' + str(i)) for i in range(0,8)]
+    return features, label
 
 def train_input_fn(params):
     data_file=params['data_file']
     ds = tf.data.TextLineDataset(data_file)
     ds = ds.map(_parse_line)
-    return ds.batch(FLAGS.batch_size).repeat().make_one_shot_iterator().get_next()
+    return ds.batch(FLAGS.batch_size).repeat().shuffle(buffer_size=1000).make_one_shot_iterator().get_next()
 
 
 def main(argv):
