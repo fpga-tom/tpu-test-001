@@ -26,7 +26,7 @@ feature_columns = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-
 def model_fn(features, labels, mode, params):
     del params
 
-    nodes = 16
+    nodes = 8
     edges = (nodes**2 - nodes) / 2
 
     alpha = tf.get_variable("alpha", dtype=tf.float32, shape=[5,edges])
