@@ -80,7 +80,7 @@ def train_input_fn(params):
     data_file=params['data_file']
     ds = tf.data.TextLineDataset(data_file)
     ds = ds.map(_parse_line)
-    return ds.batch(FLAGS.batch_size).repeat().shuffle(buffer_size=1000).make_one_shot_iterator().get_next()
+    return ds.repeat().shuffle(buffer_size=50000).apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
 
 def main(argv):
