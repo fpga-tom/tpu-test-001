@@ -23,7 +23,7 @@ spec:
         - --data_file=gs://tomaskrajco-tpu-test-001-bucket/data/data.csv
         - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/pcb
         - --use_tpu=True
-        - --iterations=2000
+        - --iterations=500
         - --train_steps=20000
         resources:
           limits:
