@@ -29,7 +29,7 @@ def model_fn(features, labels, mode, params):
     nodes = 8
     edges = (nodes**2 - nodes) / 2
 
-    alpha = tf.get_variable("alpha", dtype=tf.float32, shape=[5,edges])
+    alpha = tf.get_variable("alpha", dtype=tf.float32, shape=[3,edges])
     sa = tf.nn.softmax(alpha)
 
     dense = {0: tf.feature_column.input_layer(features, feature_columns)}
@@ -37,15 +37,13 @@ def model_fn(features, labels, mode, params):
     mapping = {}
     for i in range(0,nodes):
         for j in range(i+1, nodes):
-            dense00 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
-            dense10 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
-            dense20 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
-            dense30 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
-            dense40 = tf.constant([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
+            dense00 = tf.layers.dense(dense[i], 16, activation=tf.sigmoid)
+            dense10 = tf.layers.dense(dense00, 16, activation=tf.sigmoid)
+            dense20 = tf.constant([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
             if (i,j) not in mapping:
                 mapping[(i,j)] = count
                 count += 1
-            out0 = sa[0,mapping[(i,j)]] * dense00 + sa[1,mapping[(i,j)]] * dense10 + sa[2,mapping[(i,j)]] * dense20 +  sa[3,mapping[(i,j)]] * dense00 + sa[4,mapping[(i,j)]]
+            out0 = sa[0,mapping[(i,j)]] * dense10 + sa[1,mapping[(i,j)]] * dense20
             if j not in dense:
                 dense[j] = out0
             else:
