@@ -39,9 +39,9 @@ def model_fn(features, labels, mode, params):
     mapping = {}
     for i in range(0,nodes):
         for j in range(i+1, nodes):
-            dense00 = tf.layers.dense(dense[i], 16, activation=tf.sigmoid)
+            dense00 = tf.layers.dense(dense[i], 4, activation=tf.tanh)
             dense10 = tf.layers.dense(dense00, 1, activation=tf.sigmoid)
-            dense20 = tf.constant([0], dtype=tf.float32)
+            dense20 = tf.constant([1e-2], dtype=tf.float32)
             if (i,j) not in mapping:
                 mapping[(i,j)] = count
                 count += 1
@@ -49,11 +49,12 @@ def model_fn(features, labels, mode, params):
             if j not in dense:
                 dense[j] = out0
             else:
-                dense[j] += out0
+                dense[j] = tf.concat([dense[j], out0], 1)
 
 
-#    output_layer = tf.layers.dense(dense[nodes-1], 8, activation=tf.sigmoid, name="output_layer")
-    output_layer = tf.concat([dense[nodes-i-1] for i in range(0,8)],1)
+#    output_layer = tf.layers.dense(dense[nodes-1], 8, activation=tf.tanh, name="output_layer")
+    print(dense[nodes-1].get_shape())
+    output_layer = tf.concat([dense[nodes-1][0:8][i] for i in range(0,8)],2)
 
     loss = tf.reduce_mean(tf.losses.mean_squared_error(labels=labels, predictions=output_layer))
 
