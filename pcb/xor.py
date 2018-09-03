@@ -41,7 +41,7 @@ def model_fn(features, labels, mode, params):
             dense10 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
             dense20 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
             dense30 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
-            dense40 = tf.layers.dense(dense[i], 16, activation=tf.tanh)
+            dense40 = tf.constant([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
             if (i,j) not in mapping:
                 mapping[(i,j)] = count
                 count += 1
