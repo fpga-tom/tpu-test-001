@@ -38,6 +38,7 @@ def predict_input_fn(params):
 
 def adi(estimator):
     outputs = estimator.predict(predict_input_fn)
+    policy_output, value_output = outputs['policy_output'], outputs['value_output']
     print([o for o in outputs])
 
 def model_fn(features, labels, mode, params):
@@ -70,7 +71,8 @@ def model_fn(features, labels, mode, params):
     if mode == tf.estimator.ModeKeys.PREDICT:
         predictions = {
                 'policy_output' : policy_output,
-                'value_output' : value_output
+                'value_output' : value_output,
+                'reward': features['reward']
         }
         tpu_estimator_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
