@@ -18,7 +18,7 @@ tf.flags.DEFINE_string("data_file", default="./x_input.csv", help="Input data fi
 FLAGS = tf.flags.FLAGS
 
 len_solved = 8
-num_actions = len_solved
+num_actions = len_solved + 1
 
 FIELD_DEFAULTS=[[0.] for i in range(0, len_solved)] + [[0.]]
 COLUMNS = ['a'+str(i) for i in range(0, len_solved)] + ['distance']
