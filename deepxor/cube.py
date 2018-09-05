@@ -15,6 +15,7 @@ tf.flags.DEFINE_integer("num_shards", default=8, help="Number of shards (TPU chi
 tf.flags.DEFINE_float("learning_rate", default=.1, help="Learning rate")
 tf.flags.DEFINE_integer("train_steps", default=1000, help="training steps")
 tf.flags.DEFINE_string("data_file", default="./x_input.csv", help="Input data file")
+tf.flags.DEFINE_string("train_file", default="./train.csv", help="Input data file")
 
 FLAGS = tf.flags.FLAGS
 
@@ -22,8 +23,11 @@ len_solved = 8
 num_actions = len_solved + 1
 
 FIELD_DEFAULTS=[[0.] for i in range(0, len_solved)] + [[0.], [0.]]
+FIELD_TRAIN=[[0.] for i in range(0, len_solved)] + [[0.], [0.], [0.]]
 COLUMNS = ['a'+str(i) for i in range(0, len_solved)] + ['reward'] + ['distance']
+COLUMNS_TRAIN = ['a'+str(i) for i in range(0, len_solved)] + ['distance'] + ['policy'] + ['value']
 feature_columns = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-2]]
+feature_columns_train = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-3]]
 
 def _parse_line(line):
     fields = tf.decode_csv(line, FIELD_DEFAULTS)
@@ -35,6 +39,21 @@ def predict_input_fn(params):
     ds = tf.data.TextLineDataset(data_file)
     ds = ds.map(_parse_line)
     return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
+
+def _parse_line_train(line):
+    fields = tf.decode_csv(line, FIELD_TRAIN)
+    features = dict(zip(COLUMNS_TRAIN, fields))
+    labels = {'distance': features.pop('distance'),
+            'policy_output' : features.pop('policy'),
+            'value_output' : features.pop('value')
+            }
+    return features, labels
+
+def train_input_fn(params):
+    data_file=params['train_file']
+    ds = tf.data.TextLineDataset(data_file)
+    ds = ds.map(_parse_line_train)
+    return ds.repeat().shuffle(buffer_size=50000).apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
 
 def adi(estimator):
@@ -52,6 +71,8 @@ def adi(estimator):
                     y_p = np.argmax(arg)
                     writer.writerow(next(reader) + [y_p, y_v])
                     buf = []
+
+    estimator.train(train_input_fn)
 
 
 def model_fn(features, labels, mode, params):
@@ -126,7 +147,7 @@ def main(argv):
         model_fn=model_fn,
         train_batch_size=FLAGS.batch_size,
         use_tpu=FLAGS.use_tpu,
-        params={'data_file': FLAGS.data_file},
+        params={'data_file': FLAGS.data_file, 'train_file': FLAGS.train_file},
         config=run_config
     )
 
