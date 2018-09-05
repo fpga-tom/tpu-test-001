@@ -26,12 +26,15 @@ def generate(k):
 
 def generate_all(l, k):
     with open('x_input.csv', 'wb') as csvfile:
-        writer = csv.writer(csvfile)
-        for i in range(0, l):
-            for row in generate(k):
-                for a in range(0, num_actions):
-                    state = apply_action(row[0], a)
-                    r = reward(state)
-                    writer.writerow(state + [r] + [row[1]])
+        with open('X_input.csv', 'wb') as csvfile1:
+            writer = csv.writer(csvfile)
+            writer1 = csv.writer(csvfile1)
+            for i in range(0, l):
+                for row in generate(k):
+                    writer1.writerow(row[0] + [row[1]])
+                    for a in range(0, num_actions):
+                        state = apply_action(row[0], a)
+                        r = reward(state)
+                        writer.writerow(state + [r] + [row[1]])
 
 generate_all(100,100)
