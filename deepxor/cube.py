@@ -38,8 +38,17 @@ def predict_input_fn(params):
 
 def adi(estimator):
     outputs = estimator.predict(predict_input_fn)
-    outputs = tf.reshape(outputs, [-1, num_actions])
-    print([o for o in outputs])
+    buf = []
+    with open('./train.csv', 'wb') as csvfile:
+        writer = csv.writer(csvfile)
+        for i,o in enumerate(outputs):
+            buf.append(o)
+            if i % num_actions:
+                arg = np.map(buf, lambda x: x['reward'][0])
+                y_v = np.max(arg)
+                y_p = np.argmax(arg)
+                writer.writerow(o['policy_output'] + o['value_output'])
+
 
 def model_fn(features, labels, mode, params):
     input_layer = tf.feature_column.input_layer(features, feature_columns)
