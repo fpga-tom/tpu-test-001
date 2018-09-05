@@ -42,9 +42,9 @@ def adi(estimator):
     buf = []
     with open('./train.csv', 'wb') as csvfile:
         writer = csv.writer(csvfile)
-        for i,o in enumerate(outputs):
+        for o in outputs:
             buf.append(o)
-            if i % num_actions == num_actions-1:
+            if len(buf) == num_actions:
                 arg = [x['reward'][0] for x in buf]
                 y_v = np.max(arg)
                 y_p = np.argmax(arg)
