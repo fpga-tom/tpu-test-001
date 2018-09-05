@@ -44,7 +44,7 @@ def adi(estimator):
         writer = csv.writer(csvfile)
         for i,o in enumerate(outputs):
             buf.append(o)
-            if i % num_actions:
+            if i % num_actions == num_actions-1:
                 arg = [x['reward'][0] for x in buf]
                 y_v = np.max(arg)
                 y_p = np.argmax(arg)
