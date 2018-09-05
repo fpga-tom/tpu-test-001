@@ -23,7 +23,7 @@ len_solved = 8
 num_actions = len_solved + 1
 
 FIELD_DEFAULTS=[[0.] for i in range(0, len_solved)] + [[0.], [0.]]
-FIELD_TRAIN=[[0.] for i in range(0, len_solved)] + [[0.], [0.], [0.]]
+FIELD_TRAIN=[[0.] for i in range(0, len_solved)] + [[0.]] + [[0.] for i in range(0, len_solved)] + [[0.]]
 COLUMNS = ['a'+str(i) for i in range(0, len_solved)] + ['reward'] + ['distance']
 COLUMNS_TRAIN = ['a'+str(i) for i in range(0, len_solved)] + ['distance'] + ['policy'] + ['value']
 feature_columns = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-2]]
@@ -68,8 +68,9 @@ def adi(estimator):
                 if len(buf) == num_actions:
                     arg = [x['reward'][0] for x in buf]
                     y_v = np.max(arg)
-                    y_p = np.argmax(arg)
-                    writer.writerow(next(reader) + [y_p, y_v])
+                    y_p = [0 for i in range(0, num_actions)]
+                    y_p[np.argmax(arg)] = 1
+                    writer.writerow(next(reader) + y_p + [y_v])
                     buf = []
 
     estimator.train(train_input_fn)
@@ -86,9 +87,9 @@ def model_fn(features, labels, mode, params):
 
 
     if mode == tf.estimator.ModeKeys.TRAIN:
-        loss = tf.reduce_mean(1e-3*tf.losses.mean_squared_error(labels['value_output'],
+        loss = tf.reduce_mean(1e-3*tf.losses.mean_squared_error(tf.reshape(labels['value_output'],[-1,1]),
             predictions=value_output) + 
-            tf.losses.softmax_cross_entropy_with_logits_v2(labels=labels['policy_output'],
+            tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
                 logits=policy_output))
         learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,
                 tf.train.get_global_step(), 100000, .96)
