@@ -38,6 +38,7 @@ def predict_input_fn(params):
 
 def adi(estimator):
     outputs = estimator.predict(predict_input_fn)
+    outputs = tf.reshape(outputs, [-1, num_actions])
     print([o for o in outputs])
 
 def model_fn(features, labels, mode, params):
