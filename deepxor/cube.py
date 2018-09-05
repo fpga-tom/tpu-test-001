@@ -41,15 +41,17 @@ def adi(estimator):
     outputs = estimator.predict(predict_input_fn)
     buf = []
     with open('./train.csv', 'wb') as csvfile:
-        writer = csv.writer(csvfile)
-        for o in outputs:
-            buf.append(o)
-            if len(buf) == num_actions:
-                arg = [x['reward'][0] for x in buf]
-                y_v = np.max(arg)
-                y_p = np.argmax(arg)
-                writer.writerow(o['policy_output'] + o['value_output'])
-                buf = []
+        with open('./X_input.csv', 'r') as csvfile1:
+            reader = csv.reader(csvfile1)
+            writer = csv.writer(csvfile)
+            for o in outputs:
+                buf.append(o)
+                if len(buf) == num_actions:
+                    arg = [x['reward'][0] for x in buf]
+                    y_v = np.max(arg)
+                    y_p = np.argmax(arg)
+                    writer.writerow(reader.readrow() + [y_p, y_v])
+                    buf = []
 
 
 def model_fn(features, labels, mode, params):
