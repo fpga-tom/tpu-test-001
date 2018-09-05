@@ -34,7 +34,7 @@ def predict_input_fn(params):
     data_file=params['data_file']
     ds = tf.data.TextLineDataset(data_file)
     ds = ds.map(_parse_line)
-    return ds.shuffle(buffer_size=50000).apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
+    return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
 
 def adi(estimator):
