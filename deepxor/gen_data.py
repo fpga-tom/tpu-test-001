@@ -29,7 +29,6 @@ def generate_all(l, k):
         writer = csv.writer(csvfile)
         for i in range(0, l):
             for row in generate(k):
-                writer.writerow(row[0] + [row[1]])
                 for a in range(0, num_actions):
                     writer.writerow(apply_action(row[0], a) + [row[1]])
 
