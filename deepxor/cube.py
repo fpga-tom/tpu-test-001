@@ -44,7 +44,7 @@ def _parse_line_train(line):
     fields = tf.decode_csv(line, FIELD_TRAIN)
     features = dict(zip(COLUMNS_TRAIN, fields))
     labels = {'distance': features.pop('distance'),
-            'policy_output' : tf.stackfeatures.pop('policy' + str(i)) for i in range(0, len_solved),
+            'policy_output' : tf.stack(features.pop('policy' + str(i)) for i in range(0, len_solved)),
             'value_output' : features.pop('value')
             }
     return features, labels
