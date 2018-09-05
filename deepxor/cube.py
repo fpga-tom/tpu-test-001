@@ -1,6 +1,7 @@
 import random
 import tensorflow as tf
 import numpy as np
+import csv
 
 tf.flags.DEFINE_string("tpu", default=None, help="TPU which to use")
 tf.flags.DEFINE_string("tpu_zone", default=None, help="GCE zone of TPU" )
@@ -44,10 +45,11 @@ def adi(estimator):
         for i,o in enumerate(outputs):
             buf.append(o)
             if i % num_actions:
-                arg = np.map(buf, lambda x: x['reward'][0])
+                arg = [x['reward'][0] for x in buf]
                 y_v = np.max(arg)
                 y_p = np.argmax(arg)
                 writer.writerow(o['policy_output'] + o['value_output'])
+                buf = []
 
 
 def model_fn(features, labels, mode, params):
