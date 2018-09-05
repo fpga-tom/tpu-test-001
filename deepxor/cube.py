@@ -82,7 +82,7 @@ def model_fn(features, labels, mode, params):
     l_1 = tf.layers.dense(l_0, 2048, activation=tf.nn.elu)
     l_2 = tf.layers.dense(l_1, 512, activation=tf.nn.elu)
     l_3 = tf.layers.dense(l_1, 512, activation=tf.nn.elu)
-    policy_output = tf.nn.softmax(tf.layers.dense(l_2, num_actions, activation=tf.nn.sigmoid))
+    policy_output = tf.nn.softmax(tf.layers.dense(l_2, num_actions, activation=tf.nn.tanh))
     value_output = tf.layers.dense(l_3, 1, activation=tf.tanh)
 
 
