@@ -50,7 +50,7 @@ def adi(estimator):
                     arg = [x['reward'][0] for x in buf]
                     y_v = np.max(arg)
                     y_p = np.argmax(arg)
-                    writer.writerow(reader.readrow() + [y_p, y_v])
+                    writer.writerow(next(reader) + [y_p, y_v])
                     buf = []
 
 
