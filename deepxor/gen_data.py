@@ -30,6 +30,8 @@ def generate_all(l, k):
         for i in range(0, l):
             for row in generate(k):
                 for a in range(0, num_actions):
-                    writer.writerow(apply_action(row[0], a) + [row[1]])
+                    state = apply_action(row[0], a)
+                    r = reward(state)
+                    writer.writerow(state + [r] + [row[1]])
 
 generate_all(100,100)

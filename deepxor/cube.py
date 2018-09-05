@@ -20,13 +20,12 @@ FLAGS = tf.flags.FLAGS
 len_solved = 8
 num_actions = len_solved + 1
 
-FIELD_DEFAULTS=[[0.] for i in range(0, len_solved)] + [[0.]]
-COLUMNS = ['a'+str(i) for i in range(0, len_solved)] + ['distance']
-feature_columns = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-1]]
+FIELD_DEFAULTS=[[0.] for i in range(0, len_solved)] + [[0.], [0.]]
+COLUMNS = ['a'+str(i) for i in range(0, len_solved)] + ['reward'] + ['distance']
+feature_columns = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-2]]
 
 def _parse_line(line):
     fields = tf.decode_csv(line, FIELD_DEFAULTS)
-    del fields[-1]
     features = dict(zip(COLUMNS, fields))
     return features
 
