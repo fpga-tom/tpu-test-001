@@ -2,11 +2,12 @@ import random
 import csv
 
 solved = [1, 1, 1, 1, 0, 0, 0, 0]
-num_actions = len(solved)*2
+num_actions = len(solved) + 1
 
 def apply_action(state, action):
     state = [i for i in state]
-    state[action >> 1] ^= action & 1
+    if action < len(solved):
+        state[action] ^= 1
     return state
 
 def reward(state):
@@ -29,5 +30,7 @@ def generate_all(l, k):
         for i in range(0, l):
             for row in generate(k):
                 writer.writerow(row[0] + [row[1]])
+                for a in range(0, num_actions):
+                    writer.writerow(apply_action(row[0], a) + [row[1]])
 
 generate_all(100,100)
