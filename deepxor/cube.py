@@ -23,9 +23,9 @@ len_solved = 8
 num_actions = len_solved + 1
 
 FIELD_DEFAULTS=[[0.] for i in range(0, len_solved)] + [[0.], [0.]]
-FIELD_TRAIN=[[0.] for i in range(0, len_solved)] + [[0.]] + [[0.] for i in range(0, len_solved)] + [[0.]]
+FIELD_TRAIN=[[0.] for i in range(0, len_solved)] + [[0.]] + [[0.] for i in range(0, num_action)] + [[0.]]
 COLUMNS = ['a'+str(i) for i in range(0, len_solved)] + ['reward'] + ['distance']
-COLUMNS_TRAIN = ['a'+str(i) for i in range(0, len_solved)] + ['distance'] + ['policy' + str(i) for i in range(0, len_solved)] + ['value']
+COLUMNS_TRAIN = ['a'+str(i) for i in range(0, len_solved)] + ['distance'] + ['policy' + str(i) for i in range(0, num_actions)] + ['value']
 feature_columns = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-2]]
 feature_columns_train = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-3]]
 
@@ -44,7 +44,7 @@ def _parse_line_train(line):
     fields = tf.decode_csv(line, FIELD_TRAIN)
     features = dict(zip(COLUMNS_TRAIN, fields))
     labels = {'distance': features.pop('distance'),
-            'policy_output' : tf.stack([features.pop('policy' + str(i)) for i in range(0, len_solved)]),
+            'policy_output' : tf.stack([features.pop('policy' + str(i)) for i in range(0, num_actions)]),
             'value_output' : features.pop('value')
             }
     return features, labels
