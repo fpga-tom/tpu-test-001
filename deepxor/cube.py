@@ -38,7 +38,6 @@ def predict_input_fn(params):
 
 def adi(estimator):
     outputs = estimator.predict(predict_input_fn)
-    policy_output, value_output = outputs['policy_output'], outputs['value_output']
     print([o for o in outputs])
 
 def model_fn(features, labels, mode, params):
