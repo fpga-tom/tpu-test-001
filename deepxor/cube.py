@@ -82,7 +82,8 @@ def model_fn(features, labels, mode, params):
     l_1 = tf.layers.dense(l_0, 2048, activation=tf.nn.elu)
     l_2 = tf.layers.dense(l_1, 512, activation=tf.nn.elu)
     l_3 = tf.layers.dense(l_1, 512, activation=tf.nn.elu)
-    policy_output = tf.nn.softmax(tf.layers.dense(l_2, num_actions, activation=tf.nn.tanh))
+    logits = tf.layers.dense(l_2, num_actions)
+    policy_output = tf.nn.softmax(logits)
     value_output = tf.layers.dense(l_3, 1, activation=tf.tanh)
 
 
@@ -90,7 +91,7 @@ def model_fn(features, labels, mode, params):
         loss = tf.reduce_mean(1e-3*tf.losses.mean_squared_error(tf.reshape(labels['value_output'],[-1,1]),
             predictions=value_output) + 
             tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
-                logits=policy_output))
+                logits=logits))
         learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,
                 tf.train.get_global_step(), 100000, .96)
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
