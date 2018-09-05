@@ -73,7 +73,7 @@ def adi(estimator):
                     writer.writerow(next(reader) + y_p + [y_v])
                     buf = []
 
-    estimator.train(train_input_fn)
+    estimator.train(train_input_fn, max_steps=FLAGS.train_steps)
 
 
 def model_fn(features, labels, mode, params):
