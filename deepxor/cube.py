@@ -71,7 +71,7 @@ def model_fn(features, labels, mode, params):
         predictions = {
                 'policy_output' : policy_output,
                 'value_output' : value_output,
-                'reward': features['reward'] + value_output
+                'reward': features['reward']
         }
         tpu_estimator_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
