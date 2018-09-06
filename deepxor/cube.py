@@ -119,6 +119,10 @@ def model_fn(features, labels, mode, params):
                 loss=loss, 
                 train_op=optimizer.minimize(loss, tf.train.get_global_step())
         )
+        if FLAGS.use_tpu:
+            return tpu_estimator_spec
+        else:
+            return tpu_estimator_spec.as_estimator_spec()
 
     if mode == tf.estimator.ModeKeys.PREDICT:
         predictions = {
@@ -132,13 +136,10 @@ def model_fn(features, labels, mode, params):
                 mode=mode,
                 predictions=predictions
         )
-
-
-
-    if FLAGS.use_tpu:
-        return tpu_estimator_spec
-    else:
         return tpu_estimator_spec.as_estimator_spec()
+
+
+
     
 
 
