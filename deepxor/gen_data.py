@@ -37,4 +37,4 @@ def generate_all(l, k):
                         r = reward(state)
                         writer.writerow(state + [r] + [row[1]])
 
-generate_all(100,100)
+generate_all(50,50)

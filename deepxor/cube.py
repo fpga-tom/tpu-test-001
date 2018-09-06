@@ -57,23 +57,24 @@ def train_input_fn(params):
 
 
 def adi(estimator):
-    outputs = estimator.predict(predict_input_fn)
-    buf = []
-    with open('./train.csv', 'wb') as csvfile:
-        with open('./X_input.csv', 'r') as csvfile1:
-            reader = csv.reader(csvfile1)
-            writer = csv.writer(csvfile)
-            for o in outputs:
-                buf.append(o)
-                if len(buf) == num_actions:
-                    arg = [x['reward'][0] for x in buf]
-                    y_v = np.max(arg)
-                    y_p = [0 for i in range(0, num_actions)]
-                    y_p[np.argmax(arg)] = 1
-                    writer.writerow(next(reader) + y_p + [y_v])
-                    buf = []
+    for c in range(0,100):
+        outputs = estimator.predict(predict_input_fn)
+        buf = []
+        with open('./train.csv', 'wb') as csvfile:
+            with open('./X_input.csv', 'r') as csvfile1:
+                reader = csv.reader(csvfile1)
+                writer = csv.writer(csvfile)
+                for o in outputs:
+                    buf.append(o)
+                    if len(buf) == num_actions:
+                        arg = [x['reward'][0] for x in buf]
+                        y_v = np.max(arg)
+                        y_p = [0 for i in range(0, num_actions)]
+                        y_p[np.argmax(arg)] = 1
+                        writer.writerow(next(reader) + y_p + [y_v])
+                        buf = []
 
-    estimator.train(train_input_fn, max_steps=FLAGS.train_steps)
+        estimator.train(train_input_fn, max_steps=FLAGS.train_steps*(c+1))
 
 
 def model_fn(features, labels, mode, params):
@@ -88,10 +89,10 @@ def model_fn(features, labels, mode, params):
 
 
     if mode == tf.estimator.ModeKeys.TRAIN:
-        loss = tf.reduce_mean(1e-3*tf.losses.mean_squared_error(tf.reshape(labels['value_output'],[-1,1]),
+        loss = tf.reduce_mean((1e-2*tf.losses.mean_squared_error(tf.reshape(labels['value_output'],[-1,1]),
             predictions=value_output) + 
             tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
-                logits=logits))
+                logits=logits)) / (labels['distance'] + 1))
         learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,
                 tf.train.get_global_step(), 100000, .96)
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
