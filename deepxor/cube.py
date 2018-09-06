@@ -20,7 +20,7 @@ tf.flags.DEFINE_string("sample_file", default="./X_input.csv", help="Samples dat
 
 FLAGS = tf.flags.FLAGS
 
-solved = [1, 1, 1, 1, 0, 0, 0, 0]
+solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1]
 len_solved = len(solved)
 num_actions = len_solved + 1
 
@@ -43,9 +43,9 @@ def reward(state):
     return -1
 
 def _generate():
-    for j in range(0,10):
+    for j in range(0,150):
         current = solved
-        for i in range(0,10):
+        for i in range(0,30):
             for a in range(0, num_actions):
                 state = apply_action(current, a)
                 yield state, current, reward(state), i
