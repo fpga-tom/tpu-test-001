@@ -19,7 +19,7 @@ spec:
         image: gcr.io/tpu-test-001/deepxor-tpu-image
         command:
         - python3
-        - cupe.py
+        - cube.py
         - --data_file=gs://tomaskrajco-tpu-test-001-bucket/deepxor-data/x_input.csv
         - --sample_file=gs://tomaskrajco-tpu-test-001-bucket/deepxor-data/X_input.csv
         - --train_file=gs://tomaskrajco-tpu-test-001-bucket/deepxor-data/train.csv
