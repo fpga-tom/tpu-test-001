@@ -51,6 +51,7 @@ def _generate():
                 state = apply_action(current, a)
                 yield state, current, reward(state), i
             current = apply_action(current, random.randint(0,num_actions-1))
+    raise StopIteration
 
 def predict_input_fn(params):
     ds = tf.data.Dataset.from_generator(_generate,
@@ -73,11 +74,11 @@ def train_input_fn(params):
     return ds.repeat().shuffle(buffer_size=50000).apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
 
-def adi(estimator, estimator_cpu):
+def adi(estimator):
     global train_samples
     for c in range(0,100):
         train_samples = []
-        outputs = estimator_cpu.predict(predict_input_fn)
+        outputs = estimator.predict(predict_input_fn)
         buf = []
         for o in outputs:
             buf.append(o)
@@ -173,16 +174,8 @@ def main(argv):
         config=run_config
     )
 
-    estimator_cpu = tf.contrib.tpu.TPUEstimator(
-        model_fn=model_fn,
-        train_batch_size=FLAGS.batch_size,
-        predict_batch_size=FLAGS.batch_size,
-        use_tpu=False,
-        params={'data_file': FLAGS.data_file, 'train_file': FLAGS.train_file},
-        config=run_config
-    )
 
-    adi(estimator, estimator_cpu)
+    adi(estimator)
 
 
 if __name__ == "__main__":
