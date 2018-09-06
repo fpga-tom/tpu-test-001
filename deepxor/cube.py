@@ -16,64 +16,77 @@ tf.flags.DEFINE_float("learning_rate", default=.1, help="Learning rate")
 tf.flags.DEFINE_integer("train_steps", default=1000, help="training steps")
 tf.flags.DEFINE_string("data_file", default="./x_input.csv", help="Input data file")
 tf.flags.DEFINE_string("train_file", default="./train.csv", help="Input data file")
-tf.flags.DEFINE_string("sample_file", default="./X_train.csv", help="Samples data file")
+tf.flags.DEFINE_string("sample_file", default="./X_input.csv", help="Samples data file")
 
 FLAGS = tf.flags.FLAGS
 
-len_solved = 8
+solved = [1, 1, 1, 1, 0, 0, 0, 0]
+len_solved = len(solved)
 num_actions = len_solved + 1
 
 FIELD_DEFAULTS=[[0.] for i in range(0, len_solved)] + [[0.], [0.]]
 FIELD_TRAIN=[[0.] for i in range(0, len_solved)] + [[0.]] + [[0.] for i in range(0, num_actions)] + [[0.]]
-COLUMNS = ['a'+str(i) for i in range(0, len_solved)] + ['reward'] + ['distance']
-COLUMNS_TRAIN = ['a'+str(i) for i in range(0, len_solved)] + ['distance'] + ['policy' + str(i) for i in range(0, num_actions)] + ['value']
-feature_columns = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-2]]
+COLUMNS = ['state'] + ['parent'] + ['reward'] + ['distance']
+COLUMNS_TRAIN = ['state', 'policy_output', 'value_output', 'distance']
+feature_columns = [tf.feature_column. numeric_column(name, shape=(len_solved)) for name in COLUMNS[:-3]]
 feature_columns_train = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-3]]
 
-def _parse_line(line):
-    fields = tf.decode_csv(line, FIELD_DEFAULTS)
-    features = dict(zip(COLUMNS, fields))
-    return features
+def apply_action(state, action):
+    state = [i for i in state]
+    if action < len(solved):
+        state[action] ^= 1
+    return state
+
+def reward(state):
+    if all([_solved == _state for _solved, _state in zip(solved, state)]):
+        return 1
+    return -1
+
+def _generate():
+    for j in range(0,10):
+        current = solved
+        for i in range(0,10):
+            for a in range(0, num_actions):
+                state = apply_action(current, a)
+                yield state, current, reward(state), i
+            current = apply_action(current, random.randint(0,num_actions-1))
 
 def predict_input_fn(params):
-    data_file=params['data_file']
-    ds = tf.data.TextLineDataset(data_file)
-    ds = ds.map(_parse_line)
+    ds = tf.data.Dataset.from_generator(_generate,
+            (tf.float32, tf.float32, tf.float32, tf.float32),
+            (tf.TensorShape([len_solved]), tf.TensorShape([len_solved]),  tf.TensorShape([]), tf.TensorShape([])))
+    ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
     return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
-def _parse_line_train(line):
-    fields = tf.decode_csv(line, FIELD_TRAIN)
-    features = dict(zip(COLUMNS_TRAIN, fields))
-    labels = {'distance': features.pop('distance'),
-            'policy_output' : tf.stack([features.pop('policy' + str(i)) for i in range(0, num_actions)]),
-            'value_output' : features.pop('value')
-            }
-    return features, labels
+train_samples = []
+
+def train_generate():
+    for sample in train_samples:
+        yield sample
 
 def train_input_fn(params):
-    data_file=params['train_file']
-    ds = tf.data.TextLineDataset(data_file)
-    ds = ds.map(_parse_line_train)
+    ds = tf.data.Dataset.from_generator(train_generate,
+            (tf.float32, tf.float32, tf.float32, tf.float32),
+            (tf.TensorShape([len_solved]), tf.TensorShape([len_solved+1]),  tf.TensorShape([]), tf.TensorShape([])))
+    ds = ds.map(lambda s, c, r, i: ({'state': s}, {'policy_output': c, 'value_output': r, 'distance': i}))
     return ds.repeat().shuffle(buffer_size=50000).apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
 
 def adi(estimator):
+    global train_samples
     for c in range(0,100):
+        train_samples = []
         outputs = estimator.predict(predict_input_fn)
         buf = []
-        with open(FLAGS.train_file, 'w+') as csvfile:
-            with open(FLAGS.sample_file, 'r') as csvfile1:
-                reader = csv.reader(csvfile1)
-                writer = csv.writer(csvfile)
-                for o in outputs:
-                    buf.append(o)
-                    if len(buf) == num_actions:
-                        arg = [x['reward'][0] for x in buf]
-                        y_v = np.max(arg)
-                        y_p = [0 for i in range(0, num_actions)]
-                        y_p[np.argmax(arg)] = 1
-                        writer.writerow(next(reader) + y_p + [y_v])
-                        buf = []
+        for o in outputs:
+            buf.append(o)
+            if len(buf) == num_actions:
+                arg = [x['reward'][0] for x in buf]
+                y_v = np.max(arg)
+                y_p = [0 for i in range(0, num_actions)]
+                y_p[np.argmax(arg)] = 1
+                train_samples.append((buf[0]['parent'], y_p, y_v, buf[0]['distance']))
+                buf = []
 
         estimator.train(train_input_fn, max_steps=FLAGS.train_steps*(c+1))
 
@@ -110,7 +123,9 @@ def model_fn(features, labels, mode, params):
         predictions = {
                 'policy_output' : policy_output,
                 'value_output' : value_output,
-                'reward': tf.reshape(features['reward'],[-1,1]) + value_output
+                'reward': tf.reshape(features['reward'],[-1,1]) + value_output,
+                'parent': features['parent'],
+                'distance': features['distance']
         }
         tpu_estimator_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,

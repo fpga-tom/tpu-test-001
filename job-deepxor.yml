@@ -20,9 +20,6 @@ spec:
         command:
         - python3
         - cube.py
-        - --data_file=gs://tomaskrajco-tpu-test-001-bucket/deepxor-data/x_input.csv
-        - --sample_file=gs://tomaskrajco-tpu-test-001-bucket/deepxor-data/X_input.csv
-        - --train_file=gs://tomaskrajco-tpu-test-001-bucket/deepxor-data/train.csv
         - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/deepxor-model
         - --use_tpu=True
         - --iterations=500
