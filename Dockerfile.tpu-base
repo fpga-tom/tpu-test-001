@@ -17,6 +17,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
     apt-get update && \
     apt-get install -y google-cloud-sdk && \
-    pip3 install tensorflow==1.10 && \
+    pip3 install tensorflow==1.9 && \
     pip3 install google-cloud-storage
 
