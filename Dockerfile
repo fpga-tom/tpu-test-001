@@ -20,6 +20,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pip3 install tensorflow==1.9 && \
     pip3 install google-cloud-storage
 
-COPY pcb /tpu-test-001
+COPY deepxor /tpu-test-001
 WORKDIR /tpu-test-001
 

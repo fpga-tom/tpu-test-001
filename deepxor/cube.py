@@ -16,6 +16,7 @@ tf.flags.DEFINE_float("learning_rate", default=.1, help="Learning rate")
 tf.flags.DEFINE_integer("train_steps", default=1000, help="training steps")
 tf.flags.DEFINE_string("data_file", default="./x_input.csv", help="Input data file")
 tf.flags.DEFINE_string("train_file", default="./train.csv", help="Input data file")
+tf.flags.DEFINE_string("sample_file", default="./X_train.csv", help="Samples data file")
 
 FLAGS = tf.flags.FLAGS
 
@@ -60,8 +61,8 @@ def adi(estimator):
     for c in range(0,100):
         outputs = estimator.predict(predict_input_fn)
         buf = []
-        with open('./train.csv', 'wb') as csvfile:
-            with open('./X_input.csv', 'r') as csvfile1:
+        with open(FLAGS.train_file, 'wb') as csvfile:
+            with open(FLAGS.sample_file, 'r') as csvfile1:
                 reader = csv.reader(csvfile1)
                 writer = csv.writer(csvfile)
                 for o in outputs:
