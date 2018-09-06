@@ -56,7 +56,7 @@ def predict_input_fn(params):
             (tf.float32, tf.float32, tf.float32, tf.float32),
             (tf.TensorShape([len_solved]), tf.TensorShape([len_solved]),  tf.TensorShape([]), tf.TensorShape([])))
     ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
-    return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
+    return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size))
 
 train_samples = []
 
@@ -78,7 +78,7 @@ def adi(estimator):
         train_samples = []
         outputs = estimator.predict(predict_input_fn)
         buf = []
-        for o in outputs:
+        for o in list(outputs):
             buf.append(o)
             if len(buf) == num_actions:
                 arg = [x['reward'][0] for x in buf]
