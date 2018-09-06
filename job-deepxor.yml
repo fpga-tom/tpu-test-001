@@ -9,7 +9,7 @@ spec:
         # The Cloud TPUs that will be created for this Job must support
         # TensorFlow 1.9. This version MUST match
         # the TensorFlow version that your model is built on.
-        tf-version.cloud-tpus.google.com: "1.9"
+        tf-version.cloud-tpus.google.com: "1.10"
     spec:
       restartPolicy: Never
       containers:
