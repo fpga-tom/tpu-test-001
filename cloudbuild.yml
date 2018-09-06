@@ -1,6 +1,6 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/tpu-base-image', '-f', 'Dockerfile.tpu-base' ]
+  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/tpu-base-image', '-f', 'Dockerfile.tpu-base', '.']
 images: [ 'gcr.io/$PROJECT_ID/tpu-base-image' ]
 
 # tpu cloud build 17
