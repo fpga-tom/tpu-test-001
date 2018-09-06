@@ -61,7 +61,7 @@ def adi(estimator):
     for c in range(0,100):
         outputs = estimator.predict(predict_input_fn)
         buf = []
-        with open(FLAGS.train_file, 'wb') as csvfile:
+        with open(FLAGS.train_file, 'w+') as csvfile:
             with open(FLAGS.sample_file, 'r') as csvfile1:
                 reader = csv.reader(csvfile1)
                 writer = csv.writer(csvfile)
