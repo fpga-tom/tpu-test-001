@@ -78,7 +78,7 @@ def adi(estimator):
         train_samples = []
         outputs = estimator.predict(predict_input_fn)
         buf = []
-        print(outputs)
+        print('########################',next(outputs))
         for o in outputs:
             buf.append(o)
             if len(buf) == num_actions:
