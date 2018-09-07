@@ -56,7 +56,8 @@ def predict_input_fn(params):
     ds = tf.data.Dataset.from_generator(_generate,
             (tf.float32, tf.float32, tf.float32, tf.float32),
             (tf.TensorShape([len_solved]), tf.TensorShape([len_solved]),  tf.TensorShape([]), tf.TensorShape([])))
-    ds = ds.map(lambda s, c, r, i: ({'state': s, 'parent': c, 'reward': r, 'distance': i},{}))
+#    ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
+    ds = ds.map(lambda s, c, r, i: {'state': s })
     return ds.batch(FLAGS.batch_size)
 
 train_samples = []
@@ -119,24 +120,24 @@ def model_fn(features, labels, mode, params):
                 loss=loss, 
                 train_op=optimizer.minimize(loss, tf.train.get_global_step())
         )
-        if FLAGS.use_tpu:
-            return tpu_estimator_spec
-        else:
-            return tpu_estimator_spec.as_estimator_spec()
 
     if mode == tf.estimator.ModeKeys.PREDICT:
         predictions = {
                 'policy_output' : policy_output,
                 'value_output' : value_output,
-#                'reward': tf.reshape(features['reward'],[-1,1]) + value_output,
-#                'parent': features['parent'],
-#                'distance': features['distance']
+                'reward': tf.reshape(features['reward'],[-1,1]) + value_output,
+                'parent': features['parent'],
+                'distance': features['distance']
         }
         tpu_estimator_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
                 predictions=predictions
         )
+
+    if FLAGS.use_tpu:
         return tpu_estimator_spec
+    else:
+        return tpu_estimator_spec.as_estimator_spec()
 
 
 def main(argv):
