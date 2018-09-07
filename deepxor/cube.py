@@ -180,6 +180,7 @@ def main(argv):
         model_fn=model_fn,
         predict_batch_size=FLAGS.batch_size,
         use_tpu=False,
+        params={},
         config=run_config
     )
 
