@@ -3,7 +3,7 @@
 #  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/tpu-base-image', '-f', 'Dockerfile.tpu-base', '.']
 #images: [ 'gcr.io/$PROJECT_ID/tpu-base-image' ]
 
-# tpu cloud build 17
+# tpu cloud build 18
 steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/deepxor-tpu-image', '.' ]
