@@ -136,7 +136,7 @@ def model_fn(features, labels, mode, params):
                 mode=mode,
                 predictions=predictions
         )
-        return tpu_estimator_spec.as_estimator_spec()
+        return tpu_estimator_spec
 
 
 
