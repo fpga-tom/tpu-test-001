@@ -128,9 +128,9 @@ def model_fn(features, labels, mode, params):
         predictions = {
                 'policy_output' : policy_output,
                 'value_output' : value_output,
-                'reward': tf.reshape(features['reward'],[-1,1]) + value_output,
-                'parent': features['parent'],
-                'distance': features['distance']
+#                'reward': tf.reshape(features['reward'],[-1,1]) + value_output,
+#                'parent': features['parent'],
+#                'distance': features['distance']
         }
         tpu_estimator_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
