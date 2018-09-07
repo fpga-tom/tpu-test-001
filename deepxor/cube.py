@@ -3,6 +3,8 @@ import random
 import tensorflow as tf
 import numpy as np
 import csv
+from tensorflow.python.estimator import estimator
+
 
 tf.flags.DEFINE_string("tpu", default=None, help="TPU which to use")
 tf.flags.DEFINE_string("tpu_zone", default=None, help="GCE zone of TPU" )
@@ -15,13 +17,14 @@ tf.flags.DEFINE_integer("iterations", default=50, help="Number of iterations per
 tf.flags.DEFINE_integer("num_shards", default=8, help="Number of shards (TPU chips)")
 tf.flags.DEFINE_float("learning_rate", default=.1, help="Learning rate")
 tf.flags.DEFINE_integer("train_steps", default=1000, help="training steps")
+tf.flags.DEFINE_integer("train_steps_per_eval", default=100, help="training steps per train call")
 tf.flags.DEFINE_string("data_file", default="./x_input.csv", help="Input data file")
 tf.flags.DEFINE_string("train_file", default="./train.csv", help="Input data file")
 tf.flags.DEFINE_string("sample_file", default="./X_input.csv", help="Samples data file")
 
 FLAGS = tf.flags.FLAGS
 
-solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1]
+solved = [1, 1, 1, 1, 0, 0, 0, 0]
 len_solved = len(solved)
 num_actions = len_solved + 1
 
@@ -56,8 +59,7 @@ def predict_input_fn(params):
     ds = tf.data.Dataset.from_generator(_generate,
             (tf.float32, tf.float32, tf.float32, tf.float32),
             (tf.TensorShape([len_solved]), tf.TensorShape([len_solved]),  tf.TensorShape([]), tf.TensorShape([])))
-#    ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
-    ds = ds.map(lambda s, c, r, i: {'state': s })
+    ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
     return ds.batch(FLAGS.batch_size)
 
 train_samples = []
@@ -74,11 +76,14 @@ def train_input_fn(params):
     return ds.repeat().shuffle(buffer_size=50000).apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
 
-def adi(estimator):
+def adi(est, cpu_est):
     global train_samples
-    for c in range(0,100):
+    current_step = estimator._load_global_step_from_checkpoint_dir(FLAGS.model_dir)
+    while current_step < FLAGS.train_steps:
+        next_checkpoint = min(current_step + FLAGS.train_steps_per_eval,
+                          FLAGS.train_steps)
         train_samples = []
-        outputs = estimator.predict(predict_input_fn)
+        outputs = cpu_est.predict(predict_input_fn)
         buf = []
         for o in outputs:
             buf.append(o)
@@ -90,7 +95,8 @@ def adi(estimator):
                 train_samples.append((buf[0]['parent'], y_p, y_v, buf[0]['distance']))
                 buf = []
 
-        estimator.train(train_input_fn, max_steps=FLAGS.train_steps*(c+1))
+        est.train(train_input_fn, max_steps=next_checkpoint)
+        current_step = next_checkpoint
 
 
 def model_fn(features, labels, mode, params):
@@ -161,7 +167,7 @@ def main(argv):
         tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards)
     )
 
-    estimator = tf.contrib.tpu.TPUEstimator(
+    est= tf.contrib.tpu.TPUEstimator(
         model_fn=model_fn,
         train_batch_size=FLAGS.batch_size,
         predict_batch_size=FLAGS.batch_size,
@@ -170,8 +176,15 @@ def main(argv):
         config=run_config
     )
 
+    cpu_est= tf.contrib.tpu.TPUEstimator(
+        model_fn=model_fn,
+        predict_batch_size=FLAGS.batch_size,
+        use_tpu=False,
+        config=run_config
+    )
 
-    adi(estimator)
+
+    adi(est, cpu_est)
 
 
 if __name__ == "__main__":
