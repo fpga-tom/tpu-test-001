@@ -139,10 +139,6 @@ def model_fn(features, labels, mode, params):
         return tpu_estimator_spec
 
 
-
-    
-
-
 def main(argv):
     tf.logging.set_verbosity(tf.logging.INFO)
 
