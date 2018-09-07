@@ -95,7 +95,7 @@ def adi(est, cpu_est):
                 train_samples.append((buf[0]['parent'], y_p, y_v, buf[0]['distance']))
                 buf = []
 
-        est.train(train_input_fn, max_steps=next_checkpoint)
+#        est.train(train_input_fn, max_steps=next_checkpoint)
         current_step = next_checkpoint
 
 
