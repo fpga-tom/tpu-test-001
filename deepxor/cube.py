@@ -123,6 +123,7 @@ def adi(est, cpu_est):
     while current_step < FLAGS.train_steps:
         next_checkpoint = min(current_step + FLAGS.train_steps_per_eval,
                           FLAGS.train_steps)
+        tf.logging.info("Type %s" % type(next_checkpoint))
 
         train_samples = []
         generate_samples()
