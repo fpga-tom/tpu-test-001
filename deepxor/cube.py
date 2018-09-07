@@ -18,9 +18,9 @@ tf.flags.DEFINE_integer("num_shards", default=8, help="Number of shards (TPU chi
 tf.flags.DEFINE_float("learning_rate", default=.1, help="Learning rate")
 tf.flags.DEFINE_integer("train_steps", default=1000, help="training steps")
 tf.flags.DEFINE_integer("train_steps_per_eval", default=100, help="training steps per train call")
-tf.flags.DEFINE_string("data_file", default="./x_input.csv", help="Input data file")
-tf.flags.DEFINE_string("train_file", default="./train.csv", help="Input data file")
-tf.flags.DEFINE_string("sample_file", default="./X_input.csv", help="Samples data file")
+tf.flags.DEFINE_string("data_file", default="./predict.tfrecord", help="Input data file")
+tf.flags.DEFINE_string("train_file", default="./train.tfrecord", help="Input data file")
+tf.flags.DEFINE_string("sample_file", default="./X_input.tfrecord", help="Samples data file")
 
 FLAGS = tf.flags.FLAGS
 
@@ -55,36 +55,77 @@ def _generate():
                 yield state, current, reward(state), i
             current = apply_action(current, random.randint(0,num_actions-1))
 
-def predict_input_fn(params):
-    ds = tf.data.Dataset.from_generator(_generate,
-            (tf.float32, tf.float32, tf.float32, tf.float32),
-            (tf.TensorShape([len_solved]), tf.TensorShape([len_solved]),  tf.TensorShape([]), tf.TensorShape([])))
-    ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
-    return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
+def _parse_function(example_proto):
+     keys_to_features = {'state':tf.FixedLenFeature((len_solved), tf.float32),
+                          'parent': tf.FixedLenFeature((len_solved), tf.float32),
+                          'reward': tf.FixedLenFeature((1), tf.float32),
+                          'distance': tf.FixedLenFeature((1), tf.float32),
+                          }
+     parsed_features = tf.parse_single_example(example_proto, keys_to_features)
+     return parsed_features
 
-train_samples = []
+def predict_input_fn(params):
+    ds = tf.data.TFRecordDataset(FLAGS.data_file)
+    ds = ds.map(_parse_function)
+#    ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
+    return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
 def train_generate():
     for sample in train_samples:
         yield sample
 
+def _parse_train(example_proto):
+     keys_to_features = {'state':tf.FixedLenFeature((len_solved), tf.float32),
+                          'policy_output': tf.FixedLenFeature((num_actions), tf.float32),
+                          'value_output': tf.FixedLenFeature((1), tf.float32),
+                          'distance': tf.FixedLenFeature((1), tf.float32),
+                          }
+     parsed_features = tf.parse_single_example(example_proto, keys_to_features)
+     return {'state': parsed_features['state']}, {'policy_output': parsed_features['policy_output'], 'value_output': parsed_features['value_output'], 'distance': parsed_features['distance']}
+
 def train_input_fn(params):
-    ds = tf.data.Dataset.from_generator(train_generate,
-            (tf.float32, tf.float32, tf.float32, tf.float32),
-            (tf.TensorShape([len_solved]), tf.TensorShape([len_solved+1]),  tf.TensorShape([]), tf.TensorShape([])))
-    ds = ds.map(lambda s, c, r, i: ({'state': s}, {'policy_output': c, 'value_output': r, 'distance': i}))
+    ds = tf.data.TFRecordDataset(FLAGS.train_file)
+    ds = ds.map(_parse_train)
+#    ds = ds.map(lambda s, c, r, i: ({'state': s}, {'policy_output': c, 'value_output': r, 'distance': i}))
     return ds.repeat().shuffle(buffer_size=50000).apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
+def _floats_feature(value):
+  return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+
+def generate_samples():
+    writer = tf.python_io.TFRecordWriter(FLAGS.data_file)
+    for g in _generate():
+        feature = {'state': _floats_feature(g[0]),
+                   'parent': _floats_feature(g[1]),
+                   'reward': _floats_feature([g[2]]),
+                   'distance': _floats_feature([g[3]])}
+        # Create an example protocol buffer
+        example = tf.train.Example(features=tf.train.Features(feature=feature))
+        # Serialize to string and write on the file
+        writer.write(example.SerializeToString())
+    writer.close()
+
+def write_train_samples(train_samples):
+    writer = tf.python_io.TFRecordWriter(FLAGS.train_file)
+    for g in train_samples:
+        feature = {'state': _floats_feature(g[0]),
+                   'policy_output': _floats_feature(g[1]),
+                   'value_output': _floats_feature([g[2]]),
+                   'distance': _floats_feature([g[3]])}
+        # Create an example protocol buffer
+        example = tf.train.Example(features=tf.train.Features(feature=feature))
+        # Serialize to string and write on the file
+        writer.write(example.SerializeToString())
+    writer.close()
 
 def adi(est, cpu_est):
-    global train_samples
-    train_samples.append((solved, [0, 0, 0, 0, 1, 0, 0, 0, 0], .2, 0))
-    est.train(train_input_fn, max_steps=1)
     current_step = estimator._load_global_step_from_checkpoint_dir(FLAGS.model_dir)
     while current_step < FLAGS.train_steps:
         next_checkpoint = min(current_step + FLAGS.train_steps_per_eval,
                           FLAGS.train_steps)
+
         train_samples = []
+        generate_samples()
         outputs = cpu_est.predict(predict_input_fn)
         buf = []
         for o in outputs:
@@ -96,6 +137,8 @@ def adi(est, cpu_est):
                 y_p[np.argmax(arg)] = 1
                 train_samples.append((buf[0]['parent'], y_p, y_v, buf[0]['distance']))
                 buf = []
+
+        write_train_samples(train_samples)
 
         est.train(train_input_fn, max_steps=next_checkpoint)
         current_step = next_checkpoint

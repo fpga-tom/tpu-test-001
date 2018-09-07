@@ -21,6 +21,8 @@ spec:
         - python3
         - cube.py
         - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/deepxor-model
+        - --data_file=gs://tomaskrajco-tpu-test-001-bucket/deepxor-model/predict.tfrecord
+        - --train_file=gs://tomaskrajco-tpu-test-001-bucket/deepxor-model/train.tfrecord
         - --use_tpu=True
         - --iterations=500
         - --train_steps=10000
