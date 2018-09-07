@@ -60,7 +60,7 @@ def predict_input_fn(params):
             (tf.float32, tf.float32, tf.float32, tf.float32),
             (tf.TensorShape([len_solved]), tf.TensorShape([len_solved]),  tf.TensorShape([]), tf.TensorShape([])))
     ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
-    return dsapply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
+    return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
 train_samples = []
 
