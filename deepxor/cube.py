@@ -78,6 +78,8 @@ def train_input_fn(params):
 
 def adi(est, cpu_est):
     global train_samples
+    train_samples.append((solved, [0, 0, 0, 0, 1, 0, 0, 0, 0], .2, 0))
+    est.train(train_input_fn, max_steps=1)
     current_step = estimator._load_global_step_from_checkpoint_dir(FLAGS.model_dir)
     while current_step < FLAGS.train_steps:
         next_checkpoint = min(current_step + FLAGS.train_steps_per_eval,
