@@ -26,7 +26,7 @@ tf.flags.DEFINE_integer("rolls_len", default=50, help="Length of one roll")
 
 FLAGS = tf.flags.FLAGS
 
-solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1]
+solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1]
 len_solved = len(solved)
 num_actions = len_solved + 1
 
