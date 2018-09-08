@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: deepxor-gpu
+spec:
+  restartPolicy: Never
+  containers:
+  - name: deepxor-gpu
+    # The official TensorFlow 1.9 TPU model image built from
+    # https://github.com/tensorflow/tpu/blob/r1.9/tools/docker/Dockerfile.
+    image: gcr.io/tpu-test-001/deepxor-tpu-image
+    command:
+    - python3
+    - cube.py
+    - --model_dir=gs://tomaskrajco-tpu-test-001-bucket/deepxor-model
+    - --data_file=gs://tomaskrajco-tpu-test-001-bucket/deepxor-model/predict.tfrecord
+    - --train_file=gs://tomaskrajco-tpu-test-001-bucket/deepxor-model/train.tfrecord
+    - --use_tpu=False
+    - --iterations=500
+    - --train_steps=10000
+    - --train_steps_per_eval=100
+    - --learning_rate=0.01
+    resources:
+      limits:
+        nvidia.com/gpu: 1
