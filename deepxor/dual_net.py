@@ -95,5 +95,5 @@ class Network():
 
 
     def run_many(self, positions):
-        return [self.predict(p) for p in positions]
+        return [self.predict(p.state) for p in positions]
     
