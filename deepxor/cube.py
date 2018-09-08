@@ -4,6 +4,8 @@ import tensorflow as tf
 import numpy as np
 import csv
 from tensorflow.python.estimator import estimator
+import dual_net
+from deepxor import solved, len_solved, num_actions, apply_action, reward
 
 
 tf.flags.DEFINE_string("tpu", default=None, help="TPU which to use")
@@ -26,9 +28,6 @@ tf.flags.DEFINE_integer("rolls_len", default=50, help="Length of one roll")
 
 FLAGS = tf.flags.FLAGS
 
-solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1]
-len_solved = len(solved)
-num_actions = len_solved + 1
 
 FIELD_DEFAULTS=[[0.] for i in range(0, len_solved)] + [[0.], [0.]]
 FIELD_TRAIN=[[0.] for i in range(0, len_solved)] + [[0.]] + [[0.] for i in range(0, num_actions)] + [[0.]]
@@ -37,16 +36,6 @@ COLUMNS_TRAIN = ['state', 'policy_output', 'value_output', 'distance']
 feature_columns = [tf.feature_column. numeric_column(name, shape=(len_solved)) for name in COLUMNS[:-3]]
 feature_columns_train = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-3]]
 
-def apply_action(state, action):
-    state = [i for i in state]
-    if action < len(solved):
-        state[action] ^= 1
-    return state
-
-def reward(state):
-    if all([_solved == _state for _solved, _state in zip(solved, state)]):
-        return 1
-    return -1
 
 def _generate():
     for j in range(0,FLAGS.rolls):
@@ -149,14 +138,7 @@ def adi(est, cpu_est):
 
 def model_fn(features, labels, mode, params):
     input_layer = tf.feature_column.input_layer(features, feature_columns)
-    l_0 = tf.layers.dense(input_layer, 4096, activation=tf.nn.elu)
-    l_1 = tf.layers.dense(l_0, 2048, activation=tf.nn.elu)
-    l_2 = tf.layers.dense(l_1, 512, activation=tf.nn.elu)
-    l_3 = tf.layers.dense(l_1, 512, activation=tf.nn.elu)
-    logits = tf.layers.dense(l_2, num_actions)
-    policy_output = tf.nn.softmax(logits)
-    value_output = tf.layers.dense(l_3, 1, activation=tf.tanh)
-
+    policy_output, value_output, logits = dual_net.create(input_layer, num_actions)
 
     if mode == tf.estimator.ModeKeys.TRAIN:
         loss = tf.reduce_mean((1e-2*tf.losses.mean_squared_error(tf.reshape(labels['value_output'],[-1,1]),
