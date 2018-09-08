@@ -227,7 +227,7 @@ def main(argv):
     cpu_est= tf.contrib.tpu.TPUEstimator(
         model_fn=model_fn,
         predict_batch_size=FLAGS.batch_size,
-        use_tpu=False,
+        use_tpu=FLAGS.use_tpu,
         params={},
         config=run_config
     )
