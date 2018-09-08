@@ -70,7 +70,7 @@ def predict_input_fn(params):
     ds = tf.data.TFRecordDataset(FLAGS.data_file)
     ds = ds.map(_parse_function)
 #    ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
-    return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size))
+    return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
 
 def train_generate():
     for sample in train_samples:
@@ -228,7 +228,7 @@ def main(argv):
         model_fn=model_fn,
         train_batch_size=FLAGS.batch_size,
         predict_batch_size=FLAGS.batch_size,
-        use_tpu=FLAGS.use_tpu,
+        use_tpu=False,
         params={},
         config=run_config
     )
