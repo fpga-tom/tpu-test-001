@@ -28,6 +28,8 @@ spec:
         - --train_steps=10000
         - --train_steps_per_eval=100
         - --learning_rate=0.01
+        - --rolls=200
+        - --rolls_len=200
         resources:
           limits:
             # Request a single v2-8 Preemptible Cloud TPU device to train the model.

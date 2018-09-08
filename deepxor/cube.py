@@ -21,6 +21,8 @@ tf.flags.DEFINE_integer("train_steps_per_eval", default=100, help="training step
 tf.flags.DEFINE_string("data_file", default="./predict.tfrecord", help="Input data file")
 tf.flags.DEFINE_string("train_file", default="./train.tfrecord", help="Input data file")
 tf.flags.DEFINE_string("sample_file", default="./X_input.tfrecord", help="Samples data file")
+tf.flags.DEFINE_integer("rolls", default=150, help="Number of rolls")
+tf.flags.DEFINE_integer("rolls_len", default=50, help="Length of one roll")
 
 FLAGS = tf.flags.FLAGS
 
@@ -47,9 +49,9 @@ def reward(state):
     return -1
 
 def _generate():
-    for j in range(0,150):
+    for j in range(0,FLAGS.rolls):
         current = solved
-        for i in range(0,50):
+        for i in range(0,FLAGS.rolls_len):
             for a in range(0, num_actions):
                 state = apply_action(current, a)
                 yield state, current, reward(state), i
