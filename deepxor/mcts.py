@@ -39,7 +39,8 @@ class MCTSNode(object):
 
     @property
     def child_action_score(self):
-        pass
+        return (self.child_Q * self.position.to_play +
+                self.child_U - 1000 * self.illegal_moves)
 
     @property
     def child_Q(self):
