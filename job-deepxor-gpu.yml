@@ -22,4 +22,4 @@ spec:
     - --learning_rate=0.01
     resources:
       limits:
-        nvidia.com/gpu: 1
+       nvidia.com/gpu: 1
