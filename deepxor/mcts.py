@@ -7,6 +7,7 @@ import math
 
 from absl import flags
 import numpy as np
+import deepxor
 
 flags.DEFINE_float('c_puct', 0.96,
                    'Exploration constant balancing priors vs. value net output.')
@@ -25,16 +26,18 @@ class MCTSNode(object):
     def __init__(self, position, fmove=None, parent=None):
         if parent is None:
             parent = DummyNode()
+        else:
+            assert fmove is not None
         self.parent = parent
         self.fmove = fmove
         self.position = position
         self.is_expanded = False
         self.losses_applied = 0
         self.illegal_moves = 1 - self.position.all_legal_moves()
-        self.child_N = np.zeros([], dtype=np.float32)
-        self.child_W = np.zeros([], dtype=np.float32)
-        self.original_prior = np.zeros([], dtype=np.float32)
-        self.child_prior = np.zeros([], dtype=np.float32)
+        self.child_N = np.zeros([deepxor.num_actions], dtype=np.float32)
+        self.child_W = np.zeros([deepxor.num_actions], dtype=np.float32)
+        self.original_prior = np.zeros([deepxor.num_actions], dtype=np.float32)
+        self.child_prior = np.zeros([deepxor.num_actions], dtype=np.float32)
         self.children = {}
 
     @property
@@ -104,14 +107,24 @@ class MCTSNode(object):
             return
         self.parent.revert_virtual_loss(up_to)
 
+    def revert_visits(self, up_to):
+        self.N -= 1
+        if self.parent is None or self is up_to:
+            return
+        self.parent.revert_visits(up_to)
+
     def incorporate_results(self, move_probabilities, value, up_to):
+        if self.is_expanded:
+            self.revert_visits(up_to=up_to)
+            return
+        self.is_expanded = True
         move_probs = move_probabilities * (1 - self.illegal_moves)
         scale = sum(move_probs)
         if scale > 0:
             move_probs *= 1 / scale
 
         self.original_prior = self.child_prior = move_probs
-        self.child_W = np.ones([], dtype=np.float32) * value
+        self.child_W = np.ones([deepxor.num_actions], dtype=np.float32) * value
         self.backup_value(value, up_to=up_to)
 
     def backup_value(self, value, up_to):
