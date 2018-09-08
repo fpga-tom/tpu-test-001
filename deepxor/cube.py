@@ -24,7 +24,7 @@ tf.flags.DEFINE_string("sample_file", default="./X_input.tfrecord", help="Sample
 
 FLAGS = tf.flags.FLAGS
 
-solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1]
+solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1]
 len_solved = len(solved)
 num_actions = len_solved + 1
 
