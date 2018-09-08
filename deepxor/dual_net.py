@@ -90,7 +90,7 @@ class Network():
     def queued_predict_input_fn(self, params):
         dataset = tf.data.Dataset.from_generator(self.generate_from_queue,
                 (tf.float32), (tf.TensorShape([len_solved])))
-        dataset = dataset.map(lambda x : tf.reshape(x, [len_solved, 1]))
+        dataset = dataset.map(lambda x : tf.reshape(x, [1, len_solved]))
         return dataset
 
 
