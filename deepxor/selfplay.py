@@ -32,6 +32,9 @@ def play(network):
         move = player.pick_move()
         player.play_move(move)
         tf.logging.info('playing move %d' % move)
+        if player.root.is_done():
+            tf.logging.info('done')
+            break
 
 
 
