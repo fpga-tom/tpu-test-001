@@ -141,7 +141,7 @@ def model_fn(features, labels, mode, params):
     policy_output, value_output, logits = dual_net.create(input_layer, num_actions)
 
     if mode == tf.estimator.ModeKeys.TRAIN:
-        loss = tf.reduce_mean((1e-2*tf.losses.mean_squared_error(tf.reshape(labels['value_output'],[-1,1]),
+        loss = tf.reduce_mean((1e-1*tf.losses.mean_squared_error(tf.reshape(labels['value_output'],[-1,1]),
             predictions=value_output) + 
             tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
                 logits=logits)) / (labels['distance'] + 1))
