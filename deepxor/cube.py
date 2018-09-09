@@ -177,7 +177,7 @@ def model_fn(features, labels, mode, params):
 
 
 def main(argv):
-    with tf.device('/device:GPU:0'):
+    with tf.device('/gpu:0'):
         tf.logging.set_verbosity(tf.logging.INFO)
 
         if FLAGS.use_tpu:
