@@ -177,46 +177,47 @@ def model_fn(features, labels, mode, params):
 
 
 def main(argv):
-    tf.logging.set_verbosity(tf.logging.INFO)
+    with tf.device('/device:GPU:0'):
+        tf.logging.set_verbosity(tf.logging.INFO)
 
-    if FLAGS.use_tpu:
-        tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
-            FLAGS.tpu,
-            zone=FLAGS.tpu_zone,
-            project=FLAGS.gcp_project
+        if FLAGS.use_tpu:
+            tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+                FLAGS.tpu,
+                zone=FLAGS.tpu_zone,
+                project=FLAGS.gcp_project
+            )
+        else:
+            tpu_cluster_resolver = ''
+
+        run_config = tf.contrib.tpu.RunConfig(
+            cluster=tpu_cluster_resolver,
+            model_dir=FLAGS.model_dir,
+            session_config=tf.ConfigProto(
+                allow_soft_placement=True, log_device_placement=True
+                ),
+            tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards)
         )
-    else:
-        tpu_cluster_resolver = ''
 
-    run_config = tf.contrib.tpu.RunConfig(
-        cluster=tpu_cluster_resolver,
-        model_dir=FLAGS.model_dir,
-        session_config=tf.ConfigProto(
-            allow_soft_placement=True, log_device_placement=True, device_count={'GPU': 1}
-            ),
-        tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards)
-    )
+        est= tf.contrib.tpu.TPUEstimator(
+            model_fn=model_fn,
+            train_batch_size=FLAGS.batch_size,
+            predict_batch_size=FLAGS.batch_size,
+            use_tpu=FLAGS.use_tpu,
+            params={'data_file': FLAGS.data_file, 'train_file': FLAGS.train_file},
+            config=run_config
+        )
 
-    est= tf.contrib.tpu.TPUEstimator(
-        model_fn=model_fn,
-        train_batch_size=FLAGS.batch_size,
-        predict_batch_size=FLAGS.batch_size,
-        use_tpu=FLAGS.use_tpu,
-        params={'data_file': FLAGS.data_file, 'train_file': FLAGS.train_file},
-        config=run_config
-    )
-
-    cpu_est= tf.contrib.tpu.TPUEstimator(
-        model_fn=model_fn,
-        train_batch_size=FLAGS.batch_size,
-        predict_batch_size=FLAGS.batch_size,
-        use_tpu=False,
-        params={},
-        config=run_config
-    )
+        cpu_est= tf.contrib.tpu.TPUEstimator(
+            model_fn=model_fn,
+            train_batch_size=FLAGS.batch_size,
+            predict_batch_size=FLAGS.batch_size,
+            use_tpu=False,
+            params={},
+            config=run_config
+        )
 
 
-    adi(est, cpu_est)
+        adi(est, cpu_est)
 
 
 if __name__ == "__main__":
