@@ -8,7 +8,7 @@ import numpy as np
 from absl import flags
 import mcts
 
-flags.DEFINE_integer('softpick_move_cutoff', 2, 'The move number (<) up to which are moves softpicked from MCTS visits.')
+flags.DEFINE_integer('softpick_move_cutoff', 100, 'The move number (<) up to which are moves softpicked from MCTS visits.')
 flags.DEFINE_integer('parallel_readouts', 8, 'Number of searches to execute in parallel. Also neural network batch size')
 flags.DEFINE_integer('num_readouts', 800, 'Number of searches to add to the MCTS search tree before playing a move')
 
@@ -37,7 +37,6 @@ class MCTSPlayer(object):
 
         Highest N is most robust indicator. In the early stage of the game, pick
         a move weighted by visit count; later on, pick the absolute max.'''
-        '''
         if self.root.position.n >= self.temp_threshold:
             fcoord = np.argmax(self.root.child_N)
             print('fcooord 1', fcoord)
@@ -45,8 +44,7 @@ class MCTSPlayer(object):
             cdf = self.root.children_as_pi(squash=True).cumsum()
             selection = random.random()
             fcoord = cdf.searchsorted(selection)
-            '''
-        fcoord = np.argmax(self.root.child_N)
+#        fcoord = np.argmax(self.root.child_N)
         return fcoord
 
     def tree_search(self, parallel_readouts=None):

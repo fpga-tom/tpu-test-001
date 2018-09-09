@@ -2,7 +2,7 @@ import copy
 
 solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1]
 len_solved = len(solved)
-num_actions = len_solved + 1
+num_actions = len_solved
 
 def apply_action(state, action):
     state = [i for i in state]
