@@ -186,35 +186,55 @@ def main(argv):
                 zone=FLAGS.tpu_zone,
                 project=FLAGS.gcp_project
             )
+            run_config = tf.contrib.tpu.RunConfig(
+                cluster=tpu_cluster_resolver,
+                model_dir=FLAGS.model_dir,
+                session_config=tf.ConfigProto(
+                    allow_soft_placement=True, log_device_placement=True
+                    ),
+                tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards)
+            )
+
+            est= tf.contrib.tpu.TPUEstimator(
+                model_fn=model_fn,
+                train_batch_size=FLAGS.batch_size,
+                predict_batch_size=FLAGS.batch_size,
+                use_tpu=FLAGS.use_tpu,
+                params={'data_file': FLAGS.data_file, 'train_file': FLAGS.train_file},
+                config=run_config
+            )
+
+            cpu_est= tf.contrib.tpu.TPUEstimator(
+                model_fn=model_fn,
+                train_batch_size=FLAGS.batch_size,
+                predict_batch_size=FLAGS.batch_size,
+                use_tpu=False,
+                params={},
+                config=run_config
+            )
         else:
-            tpu_cluster_resolver = ''
+            run_config = tf.RunConfig(
+                model_dir=FLAGS.model_dir,
+                session_config=tf.ConfigProto(
+                    allow_soft_placement=True, log_device_placement=True
+                    ),
+            )
 
-        run_config = tf.contrib.tpu.RunConfig(
-            cluster=tpu_cluster_resolver,
-            model_dir=FLAGS.model_dir,
-            session_config=tf.ConfigProto(
-                allow_soft_placement=True, log_device_placement=True
-                ),
-            tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards)
-        )
+            est= tf.Estimator(
+                model_fn=model_fn,
+                train_batch_size=FLAGS.batch_size,
+                predict_batch_size=FLAGS.batch_size,
+                params={'data_file': FLAGS.data_file, 'train_file': FLAGS.train_file},
+                config=run_config
+            )
 
-        est= tf.contrib.tpu.TPUEstimator(
-            model_fn=model_fn,
-            train_batch_size=FLAGS.batch_size,
-            predict_batch_size=FLAGS.batch_size,
-            use_tpu=FLAGS.use_tpu,
-            params={'data_file': FLAGS.data_file, 'train_file': FLAGS.train_file},
-            config=run_config
-        )
+            cpu_est= tf.Estimator(
+                model_fn=model_fn,
+                train_batch_size=FLAGS.batch_size,
+                predict_batch_size=FLAGS.batch_size,
+                config=run_config
+            )
 
-        cpu_est= tf.contrib.tpu.TPUEstimator(
-            model_fn=model_fn,
-            train_batch_size=FLAGS.batch_size,
-            predict_batch_size=FLAGS.batch_size,
-            use_tpu=False,
-            params={},
-            config=run_config
-        )
 
 
         adi(est, cpu_est)
