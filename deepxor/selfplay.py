@@ -1,6 +1,7 @@
 import tensorflow as tf
 from strategies import MCTSPlayer
 import dual_net
+from deepxor import state_diff
 
 tf.flags.DEFINE_string("tpu", default=None, help="TPU which to use")
 tf.flags.DEFINE_string("tpu_zone", default=None, help="GCE zone of TPU" )
@@ -31,7 +32,7 @@ def play(network):
 
         move = player.pick_move()
         player.play_move(move)
-        tf.logging.info('playing move %d' % move)
+        tf.logging.info('playing move: %d hamming distance: %d' % move, state_diff(player.root.position.state))
         if player.root.is_done():
             tf.logging.info('done')
             break

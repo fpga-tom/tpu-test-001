@@ -15,6 +15,9 @@ def reward(state):
         return 1
     return -1
 
+def state_diff(state):
+    return sum([1 for _solved, _state in zip(solved, state) if _solved != _state])
+
 class Position():
     def __init__(self, n=0):
         self.n = n
