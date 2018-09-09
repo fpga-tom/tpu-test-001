@@ -192,7 +192,7 @@ def main(argv):
         cluster=tpu_cluster_resolver,
         model_dir=FLAGS.model_dir,
         session_config=tf.ConfigProto(
-            allow_soft_placement=True, log_device_placement=True
+            allow_soft_placement=True, log_device_placement=True, device_count={'GPU': 1}
             ),
         tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards)
     )
