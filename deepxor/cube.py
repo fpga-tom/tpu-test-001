@@ -6,6 +6,7 @@ import csv
 from tensorflow.python.estimator import estimator
 import dual_net
 from deepxor import solved, len_solved, num_actions, apply_action, reward
+import random
 
 
 tf.flags.DEFINE_string("tpu", default=None, help="TPU which to use")
@@ -25,29 +26,31 @@ tf.flags.DEFINE_string("train_file", default="./train.tfrecord", help="Input dat
 tf.flags.DEFINE_string("sample_file", default="./X_input.tfrecord", help="Samples data file")
 tf.flags.DEFINE_integer("rolls", default=150, help="Number of rolls")
 tf.flags.DEFINE_integer("rolls_len", default=50, help="Length of one roll")
+tf.flags.DEFINE_integer("num_solved", default=50, help="Number of solved states")
 
 FLAGS = tf.flags.FLAGS
 
 
 FIELD_DEFAULTS=[[0.] for i in range(0, len_solved)] + [[0.], [0.]]
 FIELD_TRAIN=[[0.] for i in range(0, len_solved)] + [[0.]] + [[0.] for i in range(0, num_actions)] + [[0.]]
-COLUMNS = ['state'] + ['parent'] + ['reward'] + ['distance']
+COLUMNS = ['state'] + ['solved'] + ['parent'] + ['reward'] + ['distance']
 COLUMNS_TRAIN = ['state', 'policy_output', 'value_output', 'distance']
 feature_columns = [tf.feature_column. numeric_column(name, shape=(len_solved)) for name in COLUMNS[:-3]]
 feature_columns_train = [tf.feature_column.numeric_column(name) for name in COLUMNS[:-3]]
 
 
-def _generate():
+def _generate(solved):
     for j in range(0,FLAGS.rolls):
         current = solved
         for i in range(0,FLAGS.rolls_len):
             for a in range(0, num_actions):
                 state = apply_action(current, a)
-                yield state, current, reward(state), i
+                yield state, solved, current, reward(state), i
             current = apply_action(current, random.randint(0,num_actions-1))
 
 def _parse_function(example_proto):
-     keys_to_features = {'state':tf.FixedLenFeature((len_solved), tf.float32),
+     keys_to_features = {'state': tf.FixedLenFeature((len_solved), tf.float32),
+                         'solved': tf.FixedLenFeature((len_solved), tf.float32),
                           'parent': tf.FixedLenFeature((len_solved), tf.float32),
                           'reward': tf.FixedLenFeature((1), tf.float32),
                           'distance': tf.FixedLenFeature((1), tf.float32),
@@ -67,12 +70,13 @@ def train_generate():
 
 def _parse_train(example_proto):
      keys_to_features = {'state':tf.FixedLenFeature((len_solved), tf.float32),
+                         'solved': tf.FixedLenFeature((len_solved), tf.float32),
                           'policy_output': tf.FixedLenFeature((num_actions), tf.float32),
                           'value_output': tf.FixedLenFeature((1), tf.float32),
                           'distance': tf.FixedLenFeature((1), tf.float32),
                           }
      parsed_features = tf.parse_single_example(example_proto, keys_to_features)
-     return {'state': parsed_features['state']}, {'policy_output': parsed_features['policy_output'], 'value_output': parsed_features['value_output'], 'distance': parsed_features['distance']}
+     return {'state': parsed_features['state'], 'solved': parsed_features['solved']}, {'policy_output': parsed_features['policy_output'], 'value_output': parsed_features['value_output'], 'distance': parsed_features['distance']}
 
 def train_input_fn(params):
     ds = tf.data.TFRecordDataset(FLAGS.train_file)
@@ -85,24 +89,27 @@ def _floats_feature(value):
 
 def generate_samples():
     writer = tf.python_io.TFRecordWriter(FLAGS.data_file)
-    for g in _generate():
-        feature = {'state': _floats_feature(g[0]),
-                   'parent': _floats_feature(g[1]),
-                   'reward': _floats_feature([g[2]]),
-                   'distance': _floats_feature([g[3]])}
-        # Create an example protocol buffer
-        example = tf.train.Example(features=tf.train.Features(feature=feature))
-        # Serialize to string and write on the file
-        writer.write(example.SerializeToString())
+    for a in range(0, FLAGS.num_solved):
+        for g in _generate([random.randrange(0,2) for x in range(0, len_solved)]):
+            feature = {'state': _floats_feature(g[0]),
+                       'solved': _floats_feature(g[1]),
+                       'parent': _floats_feature(g[2]),
+                       'reward': _floats_feature([g[3]]),
+                       'distance': _floats_feature([g[4]])}
+            # Create an example protocol buffer
+            example = tf.train.Example(features=tf.train.Features(feature=feature))
+            # Serialize to string and write on the file
+            writer.write(example.SerializeToString())
     writer.close()
 
 def write_train_samples(train_samples):
     writer = tf.python_io.TFRecordWriter(FLAGS.train_file)
     for g in train_samples:
         feature = {'state': _floats_feature(g[0]),
-                   'policy_output': _floats_feature(g[1]),
-                   'value_output': _floats_feature([g[2]]),
-                   'distance': _floats_feature([g[3]])}
+                   'solved': _floats_feature(g[1]),
+                   'policy_output': _floats_feature(g[2]),
+                   'value_output': _floats_feature([g[3]]),
+                   'distance': _floats_feature([g[4]])}
         # Create an example protocol buffer
         example = tf.train.Example(features=tf.train.Features(feature=feature))
         # Serialize to string and write on the file
@@ -127,7 +134,7 @@ def adi(est, cpu_est):
                 y_v = np.max(arg)
                 y_p = [0 for i in range(0, num_actions)]
                 y_p[np.argmax(arg)] = 1
-                train_samples.append((buf[0]['parent'], y_p, y_v, buf[0]['distance']))
+                train_samples.append((buf[0]['parent'],buf[0]['solved'], y_p, y_v, buf[0]['distance']))
                 buf = []
 
         write_train_samples(train_samples)
@@ -163,7 +170,8 @@ def model_fn(features, labels, mode, params):
                 'value_output' : value_output,
                 'reward': tf.reshape(features['reward'],[-1,1]) + value_output,
                 'parent': features['parent'],
-                'distance': features['distance']
+                'distance': features['distance'],
+                'solved': features['solved']
         }
         tpu_estimator_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
