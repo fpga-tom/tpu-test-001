@@ -1,4 +1,5 @@
 import copy
+import numpy as np
 
 solved = [1, 1, 1, 1, 0, 0, 0, 0, 1]
 len_solved = len(solved)
@@ -36,5 +37,5 @@ class Position():
         return reward(self.state)
 
     def all_legal_moves(self):
-        return num_actions
+        return np.ones([1, num_actions])
 
