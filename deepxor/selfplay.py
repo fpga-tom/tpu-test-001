@@ -1,7 +1,7 @@
 import tensorflow as tf
 from strategies import MCTSPlayer
 import dual_net
-from deepxor import state_diff
+from deepxor import state_diff, solved
 
 tf.flags.DEFINE_string("tpu", default=None, help="TPU which to use")
 tf.flags.DEFINE_string("tpu_zone", default=None, help="GCE zone of TPU" )
@@ -21,7 +21,7 @@ def play(network):
     player.initialize_game()
 
     first_node = player.root.select_leaf()
-    prob, val = network.predict(first_node.position.state)
+    prob, val = network.predict(first_node.position.state + solved)
     first_node.incorporate_results(prob, val, first_node)
 
     while True:

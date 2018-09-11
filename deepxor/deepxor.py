@@ -1,6 +1,6 @@
 import copy
 
-solved = [1, 1, 1, 1, 0, 0, 0, 0, 1]
+solved = [1, 0, 1, 1, 0]
 len_solved = len(solved)
 num_actions = len_solved
 

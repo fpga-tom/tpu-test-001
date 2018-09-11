@@ -1,5 +1,5 @@
 import tensorflow as tf
-from deepxor import num_actions, len_solved
+from deepxor import num_actions, len_solved, solved
 from queue import Queue
 from threading import Thread
 
@@ -89,11 +89,11 @@ class Network():
 
     def queued_predict_input_fn(self, params):
         dataset = tf.data.Dataset.from_generator(self.generate_from_queue,
-                (tf.float32), (tf.TensorShape([len_solved])))
-        dataset = dataset.map(lambda x : tf.reshape(x, [1, len_solved]))
+                (tf.float32), (tf.TensorShape([len_solved*2])))
+        dataset = dataset.map(lambda x : tf.reshape(x, [1, len_solved*2]))
         return dataset
 
 
     def run_many(self, positions):
-        return zip(*[self.predict(p.state) for p in positions])
+        return zip(*[self.predict(p.state + solved) for p in positions])
     
