@@ -18,7 +18,7 @@ flags.register_validator('dirichlet_noise_alpha', lambda x: 0 <= x < 1)
 
 flags.DEFINE_float('dirichlet_noise_weight', 0.25,
                    'How much to weight the priors vs. dirichlet noise when mixing')
-flags.register_validator('dirichlet_noise_weight', lambda x: 0 <= x < 1
+flags.register_validator('dirichlet_noise_weight', lambda x: 0 <= x < 1)
 
 FLAGS = flags.FLAGS
 
