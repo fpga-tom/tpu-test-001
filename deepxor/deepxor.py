@@ -37,5 +37,5 @@ class Position():
         return reward(self.state)
 
     def all_legal_moves(self):
-        return np.ones([1, num_actions])
+        return np.ones([num_actions])
 
