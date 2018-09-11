@@ -110,6 +110,7 @@ def write_train_samples(train_samples):
     writer.close()
 
 def adi(est, cpu_est):
+    generate_samples()
     current_step = estimator._load_global_step_from_checkpoint_dir(FLAGS.model_dir)
     while current_step < FLAGS.train_steps:
         next_checkpoint = min(current_step + FLAGS.train_steps_per_eval,
@@ -117,7 +118,6 @@ def adi(est, cpu_est):
         tf.logging.info("Type %s" % type(next_checkpoint))
 
         train_samples = []
-        generate_samples()
         outputs = cpu_est.predict(predict_input_fn)
         buf = []
         for o in outputs:
