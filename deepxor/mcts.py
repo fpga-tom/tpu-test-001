@@ -12,6 +12,10 @@ import deepxor
 flags.DEFINE_float('c_puct', 0.96,
                    'Exploration constant balancing priors vs. value net output.')
 
+flags.DEFINE_float('dirichlet_noise_alpha', 0.03 * 361 / (deepxor.num_actions ** 2),
+                   'Concentrated-ness of the noise being injected into priors.')
+flags.register_validator('dirichlet_noise_alpha', lambda x: 0 <= x < 1)
+
 FLAGS = flags.FLAGS
 
 class DummyNode(object):
@@ -142,6 +146,13 @@ class MCTSNode(object):
             return probs
         return probs / np.sum(probs)
 
+    def inject_noise(self):
+        epsilon = 1e-5
+        legal_moves = (1 - self.illegal_moves) + epsilon
+        a = legal_moves * ([FLAGS.dirichlet_noise_alpha] * (deepxor.num_actions))
+        dirichlet = np.random.dirichlet(a)
+        self.child_prior = (self.child_prior * (1 - FLAGS.dirichlet_noise_weight) +
+                            dirichlet * FLAGS.dirichlet_noise_weight)
 
     def is_done(self):
         return self.position.score() == 1
