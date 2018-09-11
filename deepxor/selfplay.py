@@ -25,7 +25,7 @@ def play(network):
     first_node.incorporate_results(prob, val, first_node)
 
     while True:
-        player.root.inject_noise()
+#        player.root.inject_noise()
         current_readouts = player.root.N
         while player.root.N < current_readouts + readouts:
             player.tree_search()

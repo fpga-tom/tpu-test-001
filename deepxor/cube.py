@@ -63,7 +63,7 @@ def predict_input_fn(params):
     ds = tf.data.TFRecordDataset(FLAGS.data_file)
     ds = ds.map(_parse_function)
 #    ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
-    return ds.apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
+    return ds.batch(2**14)
 
 def train_generate():
     for sample in train_samples:
@@ -82,7 +82,7 @@ def train_input_fn(params):
     ds = tf.data.TFRecordDataset(FLAGS.train_file)
     ds = ds.map(_parse_train)
 #    ds = ds.map(lambda s, c, r, i: ({'state': s}, {'policy_output': c, 'value_output': r, 'distance': i}))
-    return ds.repeat().shuffle(buffer_size=50000).apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size)).make_one_shot_iterator().get_next()
+    return ds.repeat().shuffle(buffer_size=50000).apply(tf.contrib.data.batch_and_drop_remainder(FLAGS.batch_size))
 
 def _floats_feature(value):
   return tf.train.Feature(float_list=tf.train.FloatList(value=value))
@@ -148,7 +148,6 @@ def adi(est, cpu_est):
             self.input_queue.put(buf)
 
 
-    generate_samples()
     worker = AdiWorker()
     current_step = estimator._load_global_step_from_checkpoint_dir(FLAGS.model_dir)
     while current_step < FLAGS.train_steps:
@@ -156,6 +155,8 @@ def adi(est, cpu_est):
                           FLAGS.train_steps)
         tf.logging.info("Type %s" % type(next_checkpoint))
 
+        tf.logging.info('Generating ...')
+        generate_samples()
         tf.logging.info('Predicting ...')
         outputs = cpu_est.predict(predict_input_fn)
         buf = []
@@ -166,7 +167,7 @@ def adi(est, cpu_est):
                 buf = []
 
         tf.logging.info('Writing ...')
-        woker.write()
+        worker.write()
 
         tf.logging.info('Training ...')
         est.train(train_input_fn, max_steps=next_checkpoint)
@@ -178,7 +179,7 @@ def model_fn(features, labels, mode, params):
     policy_output, value_output, logits = dual_net.create(input_layer, num_actions)
 
     if mode == tf.estimator.ModeKeys.TRAIN:
-        loss = tf.reduce_mean((1e-1*tf.losses.mean_squared_error(tf.reshape(labels['value_output'],[-1,1]),
+        loss = tf.reduce_mean((tf.losses.mean_squared_error(tf.reshape(labels['value_output'],[-1,1]),
             predictions=value_output) + 
             tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
                 logits=logits)) / (labels['distance'] + 1))
@@ -231,7 +232,7 @@ def main(argv):
             cluster=tpu_cluster_resolver,
             model_dir=FLAGS.model_dir,
             session_config=tf.ConfigProto(
-                allow_soft_placement=True, log_device_placement=True
+                allow_soft_placement=True, log_device_placement=False
                 ),
             tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards)
         )
@@ -248,7 +249,7 @@ def main(argv):
         cpu_est= tf.contrib.tpu.TPUEstimator(
             model_fn=model_fn,
             train_batch_size=FLAGS.batch_size,
-            predict_batch_size=FLAGS.batch_size,
+            predict_batch_size=2**14,
             use_tpu=False,
             params={},
             config=run_config
