@@ -3,6 +3,9 @@ import random
 import tensorflow as tf
 import numpy as np
 import csv
+import copy
+from queue import Queue
+from threading import Thread
 from tensorflow.python.estimator import estimator
 import dual_net
 from deepxor import solved, len_solved, num_actions, apply_action, reward
@@ -25,6 +28,7 @@ tf.flags.DEFINE_string("train_file", default="./train.tfrecord", help="Input dat
 tf.flags.DEFINE_string("sample_file", default="./X_input.tfrecord", help="Samples data file")
 tf.flags.DEFINE_integer("rolls", default=150, help="Number of rolls")
 tf.flags.DEFINE_integer("rolls_len", default=50, help="Length of one roll")
+tf.flags.DEFINE_integer("num_workers", default=4, help="Number of worker threads")
 
 FLAGS = tf.flags.FLAGS
 
@@ -110,28 +114,61 @@ def write_train_samples(train_samples):
     writer.close()
 
 def adi(est, cpu_est):
+    class AdiWorker():
+        def __init__(self):
+            self.input_queue = Queue(maxsize=FLAGS.num_workers)
+            self.output_queue = Queue(maxsize=FLAGS.num_workers)
+            self.train_samples = []
+            self.worker_threads = [Thread(target=self.work_from_queue, daemon=True) for x in range(0,FLAGS.num_workers)]
+            for thread in self.worker_threads:
+                thread.start()
+            
+            self.writer_thread = Thread(target=self.write_from_queue, daemon=True)
+            self.writer_thread.start()
+
+        def work_from_queue(self):
+            while True:
+                buf = self.input_queue.get()
+                if len(buf) == num_actions:
+                    arg = [x['reward'][0] for x in buf]
+                    y_v = np.max(arg)
+                    y_p = [0 for i in range(0, num_actions)]
+                    y_p[np.argmax(arg)] = 1
+                    self.output_queue.put((buf[0]['parent'], y_p, y_v, buf[0]['distance']))
+
+        def write_from_queue(self):
+            while True:
+                self.train_samples.append(self.output_queue.get())
+
+        def write(self):
+            write_train_samples(self.train_samples)
+            self.train_samples.clear()
+        
+        def process(self, buf):
+            self.input_queue.put(buf)
+
+
     generate_samples()
+    worker = AdiWorker()
     current_step = estimator._load_global_step_from_checkpoint_dir(FLAGS.model_dir)
     while current_step < FLAGS.train_steps:
         next_checkpoint = min(current_step + FLAGS.train_steps_per_eval,
                           FLAGS.train_steps)
         tf.logging.info("Type %s" % type(next_checkpoint))
 
-        train_samples = []
+        tf.logging.info('Predicting ...')
         outputs = cpu_est.predict(predict_input_fn)
         buf = []
         for o in outputs:
             buf.append(o)
             if len(buf) == num_actions:
-                arg = [x['reward'][0] for x in buf]
-                y_v = np.max(arg)
-                y_p = [0 for i in range(0, num_actions)]
-                y_p[np.argmax(arg)] = 1
-                train_samples.append((buf[0]['parent'], y_p, y_v, buf[0]['distance']))
+                worker.process(buf)
                 buf = []
 
-        write_train_samples(train_samples)
+        tf.logging.info('Writing ...')
+        woker.write()
 
+        tf.logging.info('Training ...')
         est.train(train_input_fn, max_steps=next_checkpoint)
         current_step = next_checkpoint
 

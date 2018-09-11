@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 
-solved = [1, 1, 1, 1, 0, 0, 0, 0, 1]
+solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1]
 len_solved = len(solved)
 num_actions = len_solved
 
