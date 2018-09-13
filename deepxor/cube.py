@@ -214,7 +214,7 @@ def model_fn(features, labels, mode, params):
                 logits=logits)) / (labels['distance'] + 1))
         learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,
                 tf.train.get_global_step(), 100000, .96)
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+        optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
         if FLAGS.use_tpu:
             optimizer = tf.contrib.tpu.CrossShardOptimizer(optimizer)
 
