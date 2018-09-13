@@ -29,6 +29,7 @@ tf.flags.DEFINE_string("sample_file", default="./X_input.tfrecord", help="Sample
 tf.flags.DEFINE_integer("rolls", default=150, help="Number of rolls")
 tf.flags.DEFINE_integer("rolls_len", default=50, help="Length of one roll")
 tf.flags.DEFINE_integer("num_workers", default=4, help="Number of worker threads")
+tf.flags.DEFINE_integer("num_generators", default=2, help="Number of generator threads")
 
 FLAGS = tf.flags.FLAGS
 
@@ -59,8 +60,10 @@ def _parse_function(example_proto):
      parsed_features = tf.parse_single_example(example_proto, keys_to_features)
      return parsed_features
 
+g_fname = None
+
 def predict_input_fn(params):
-    ds = tf.data.TFRecordDataset(FLAGS.data_file)
+    ds = tf.data.TFRecordDataset(g_fname)
     ds = ds.map(_parse_function)
 #    ds = ds.map(lambda s, c, r, i: {'state': s, 'parent': c, 'reward': r, 'distance': i})
     return ds.batch(2**14)
@@ -87,8 +90,8 @@ def train_input_fn(params):
 def _floats_feature(value):
   return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
-def generate_samples():
-    writer = tf.python_io.TFRecordWriter(FLAGS.data_file)
+def generate_samples(fname):
+    writer = tf.python_io.TFRecordWriter(fname)
     for g in _generate():
         feature = {'state': _floats_feature(g[0]),
                    'parent': _floats_feature(g[1]),
@@ -147,16 +150,41 @@ def adi(est, cpu_est):
         def process(self, buf):
             self.input_queue.put(buf)
 
+    class AdiGenerator():
+        def __init__(self):
+            self.input_queue = Queue(maxsize=FLAGS.num_generators)
+            self.output_queue = Queue(maxsize=FLAGS.num_generators)
+            self.generator_threads = [Thread(target=self.generate_from_queue, daemon=True, args=[x]) for x in range(0, FLAGS.num_generators)]
+            for thread in self.generator_threads:
+                thread.start()
+            for x in range(0, FLAGS.num_generators):
+                self.input_queue.put(FLAGS.data_file + '-' + str(x))
 
+        def generate_from_queue(self, tid):
+            while True:
+                fname = self.input_queue.get()
+                generate_samples(fname)
+                self.output_queue.put(fname)
+
+        def get_sample_file(self):
+            return self.output_queue.get()
+
+        def put_sample_file(self, fname):
+            self.input_queue.put(fname)
+
+
+    global g_fname
     worker = AdiWorker()
+    generator = AdiGenerator()
     current_step = estimator._load_global_step_from_checkpoint_dir(FLAGS.model_dir)
     while current_step < FLAGS.train_steps:
         next_checkpoint = min(current_step + FLAGS.train_steps_per_eval,
                           FLAGS.train_steps)
         tf.logging.info("Type %s" % type(next_checkpoint))
 
-        tf.logging.info('Generating ...')
-        generate_samples()
+        g_fname = generator.get_sample_file()
+        tf.logging.info('Generating ' + g_fname)
+#        generate_samples()
         tf.logging.info('Predicting ...')
         outputs = cpu_est.predict(predict_input_fn)
         buf = []
@@ -169,6 +197,7 @@ def adi(est, cpu_est):
         tf.logging.info('Writing ...')
         worker.write()
 
+        generator.put_sample_file(g_fname)
         tf.logging.info('Training ...')
         est.train(train_input_fn, max_steps=next_checkpoint)
         current_step = next_checkpoint
@@ -215,47 +244,40 @@ def model_fn(features, labels, mode, params):
 
 
 def main(argv):
-    with tf.device('/gpu:0'):
-        tf.logging.set_verbosity(tf.logging.INFO)
+    tf.logging.set_verbosity(tf.logging.INFO)
 
-        if FLAGS.use_tpu:
-            tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
-                FLAGS.tpu,
-                zone=FLAGS.tpu_zone,
-                project=FLAGS.gcp_project
-            )
-        else:
-            tpu_cluster_resolver = ''
-
-
-        run_config = tf.contrib.tpu.RunConfig(
-            cluster=tpu_cluster_resolver,
-            model_dir=FLAGS.model_dir,
-            session_config=tf.ConfigProto(
-                allow_soft_placement=True, log_device_placement=False
-                ),
-            tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards)
+    if FLAGS.use_tpu:
+        tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+            FLAGS.tpu,
+            zone=FLAGS.tpu_zone,
+            project=FLAGS.gcp_project
         )
+    else:
+        tpu_cluster_resolver = ''
 
-        est= tf.contrib.tpu.TPUEstimator(
-            model_fn=model_fn,
-            train_batch_size=FLAGS.batch_size,
-            predict_batch_size=FLAGS.batch_size,
-            use_tpu=FLAGS.use_tpu,
-            params={'data_file': FLAGS.data_file, 'train_file': FLAGS.train_file},
-            config=run_config
-        )
 
-        cpu_est= tf.contrib.tpu.TPUEstimator(
-            model_fn=model_fn,
-            train_batch_size=FLAGS.batch_size,
-            predict_batch_size=2**14,
-            use_tpu=False,
-            params={},
-            config=run_config
-        )
+    run_config = tf.contrib.tpu.RunConfig(
+        cluster=tpu_cluster_resolver,
+        model_dir=FLAGS.model_dir,
+        session_config=tf.ConfigProto(
+            allow_soft_placement=True, log_device_placement=False
+            ),
+        tpu_config=tf.contrib.tpu.TPUConfig(FLAGS.iterations, FLAGS.num_shards)
+    )
 
-        adi(est, cpu_est)
+    est= tf.estimator.Estimator(
+        model_fn=model_fn,
+        params={'data_file': FLAGS.data_file, 'train_file': FLAGS.train_file},
+        config=run_config
+    )
+
+    cpu_est= tf.estimator.Estimator(
+        model_fn=model_fn,
+        params={},
+        config=run_config
+    )
+
+    adi(est, cpu_est)
 
 
 if __name__ == "__main__":
