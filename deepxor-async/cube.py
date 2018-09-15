@@ -133,9 +133,13 @@ def main(argv):
     cluster = tf.train.ClusterSpec({"ps": ps_hosts, "worker": worker_hosts})
 
     # Create and start a server for the local task.
+    config = tf.ConfigProto()
+    config.gpu_options.per_process_gpu_memory_fraction = 0.1
+    config.gpu_options.allow_growth = True
     server = tf.train.Server(cluster,
                            job_name=FLAGS.job_name,
-                           task_index=FLAGS.task_index)
+                           task_index=FLAGS.task_index,
+                           config=config)
 
     if FLAGS.job_name == "ps":
         server.join()
@@ -172,6 +176,7 @@ def main(argv):
                 global_step = tf.train.get_or_create_global_step()
                 train_op = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate).minimize(loss, global_step=global_step)
                 hooks=[tf.train.StopAtStepHook(last_step=100000)]
+
 
                 with tf.train.MonitoredTrainingSession(master=server.target,
                                            is_chief=(FLAGS.task_index == 0),
