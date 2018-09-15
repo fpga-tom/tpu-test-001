@@ -1,5 +1,5 @@
 import tensorflow as tf
-from deepxor import num_actions, len_solved
+from deepxor import num_actions, len_solved, DeepxorModel
 from queue import Queue
 from threading import Thread
 
@@ -18,7 +18,8 @@ def create(input_layer, num_actions):
     return policy_output, value_output, logits
 
 def model_fn(features, labels, mode, params):
-    policy_output, value_output, logits = create(features, num_actions)
+    local_model = DeepxorModel('play')
+    policy_output, value_output, logits = local_model(features)
 
     if mode == tf.estimator.ModeKeys.PREDICT:
         predictions = {

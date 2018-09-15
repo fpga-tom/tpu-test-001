@@ -25,8 +25,8 @@ tf.flags.DEFINE_integer("num_shards", default=8, help="Number of shards (TPU chi
 tf.flags.DEFINE_float("learning_rate", default=.1, help="Learning rate")
 tf.flags.DEFINE_integer("train_steps", default=1000, help="training steps")
 tf.flags.DEFINE_integer("train_steps_per_eval", default=100, help="training steps per train call")
-tf.flags.DEFINE_string("data_file", default="./predict.tfrecord", help="Input data file")
-tf.flags.DEFINE_string("train_file", default="./train.tfrecord", help="Input data file")
+tf.flags.DEFINE_string("data_file", default="/tmp/predict.tfrecord", help="Input data file")
+tf.flags.DEFINE_string("train_file", default="/tmp/train.tfrecord", help="Input data file")
 tf.flags.DEFINE_string("sample_file", default="./X_input.tfrecord", help="Samples data file")
 tf.flags.DEFINE_integer("rolls", default=150, help="Number of rolls")
 tf.flags.DEFINE_integer("rolls_len", default=50, help="Length of one roll")
@@ -36,6 +36,7 @@ tf.flags.DEFINE_string("ps_hosts", default="localhost:2222", help="Parameter ser
 tf.flags.DEFINE_string("worker_hosts", default="localhost:22232", help="Worker host")
 tf.flags.DEFINE_string("job_name", default="ps", help="Id of host")
 tf.flags.DEFINE_integer("task_index", default=0, help="Index of host")
+tf.flags.DEFINE_integer("checkpoint_steps", default=500, help="Checkpoint")
 
 FLAGS = tf.flags.FLAGS
 
@@ -181,7 +182,9 @@ def main(argv):
 
                 with tf.train.MonitoredTrainingSession(master=server.target,
                                            is_chief=(FLAGS.task_index == 0),
-                                           checkpoint_dir="/tmp/train_logs",
+                                           checkpoint_dir=FLAGS.model_dir,
+                                           save_checkpoint_secs=None,
+                                           save_checkpoint_steps=FLAGS.checkpoint_steps,
                                            hooks=hooks) as mon_sess:
                     while not mon_sess.should_stop():
                         fname = generator.get_sample_file()
