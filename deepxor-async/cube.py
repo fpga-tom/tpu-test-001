@@ -99,15 +99,13 @@ def write_samples(fname, generator):
     
 class AdiGenerator():
     def __init__(self):
-        self.input_queue = Queue(maxsize=FLAGS.num_generators)
-        self.output_queue = Queue(maxsize=FLAGS.num_generators)
-        self.generator_threads = [Thread(target=self.generate_from_queue, daemon=True, args=[x]) for x in range(0, 1)]
-        for thread in self.generator_threads:
-            thread.start()
-        for x in range(0, 1):
-            self.input_queue.put(FLAGS.data_file + '-' + str(FLAGS.task_index))
+        self.input_queue = Queue(maxsize=1)
+        self.output_queue = Queue(maxsize=1)
+        self.input_queue.put(FLAGS.data_file + '-' + str(FLAGS.task_index))
+        self.generator_thread = Thread(target=self.generate_from_queue, daemon=True)
+        self.generator_thread.start()
 
-    def generate_from_queue(self, tid):
+    def generate_from_queue(self):
         while True:
             fname = self.input_queue.get()
             write_samples(fname, _generate)
@@ -118,167 +116,6 @@ class AdiGenerator():
 
     def put_sample_file(self, fname):
         self.input_queue.put(fname)
-
-class AdiWorker():
-    def __init__(self, global_model, opt, generator, wid):
-        super(AdiWorker, self).__init__(daemon=True)
-        self.wid = wid
-        self.opt = opt
-        self.global_model = global_model
-        self.local_model = DeepxorModel('worker-' + str(self.wid))
-        self.generator = generator
-        self.fname = FLAGS.data_file + '-' + str(wid)
-        self.tname = FLAGS.train_file + '-' + str(wid)
-        self.save_file = FLAGS.model_dir
-        self.train_samples = []
-        self.predict = True
-
-    def run(self):
-        filename = tf.placeholder(tf.string, shape=[])
-        predict_dataset = predict_input_fn(filename)
-        training_dataset = train_input_fn(filename)
-        iterator = tf.data.Iterator.from_structure(predict_dataset.output_types, predict_dataset.output_shapes)
-        next_element = iterator.get_next()
-        predict_init_op = iterator.make_initializer(predict_dataset)
-        training_init_op = iterator.make_initializer(training_dataset)
-
-        features, labels = next_element
-
-        policy_output, value_output, logits = self.local_model(features['state'])
-
-        x_num_actions = FLAGS.rolls_len
-
-        arg = tf.reshape(labels['reward'] + value_output, [x_num_actions, num_actions])
-        parent = tf.reshape(labels['parent'], [x_num_actions, num_actions, len_solved])[:,0,:]
-        distance = tf.reshape(features['distance'], [x_num_actions, num_actions])[:,0]
-        reward = tf.reduce_max(arg, 1)
-        policy = tf.one_hot(tf.argmax(arg, 1), num_actions, 1.0, 0.0)
-
-        with tf.GradientTape(persistent=True) as tape:
-            total_loss = self.compute_loss(policy_output, value_output, logits, features, labels)
-        grads = self.opt.compute_gradients(total_loss, self.local_model.trainable_weights)
-        print([g for g in zip(grads, self.global_model.trainable_weights)])
-        update_op = self.opt.apply_gradients(zip(grads, self.global_model.trainable_weights))
-
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            while True:
-                fname = self.generator.get_sample_file()
-                sess.run(predict_init_op, feed_dict={filename: fname})
-                _policy, _value, _parent, _reward, _distance = sess.run([policy_output, value_output, parent, reward, distance])
-                self.generator.put_sample_file(fname)
-
-                for a,b,c,d,e,f in zip(_parent, _policy, _value, _parent, _reward, _distance):
-                    self.train_samples.append((a,b,c,d, e, f))
-
-                write_samples(self.tname, lambda : [s for s in self.train_samples])
-                self.train_samples.clear()
-
-                sess.run(training_init_op, feed_dict={filename: self.tname})
-                sess.run(update_op)
-
-                # Update local model with new weights
-                self.local_model.set_weights(self.global_model.get_weights())
-                print(total_loss)
-        del tape
-
-    def compute_loss(self, policy_output, value_output, logits, features, labels):
-        loss = tf.reduce_mean((0.5*tf.losses.mean_squared_error(tf.reshape(labels['value_output'], [-1,1]),
-            predictions=value_output) + 
-            tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
-                logits=logits)) / (features['distance'] + 1.0))
-        return loss
-
-
-class AdiMaster():
-    def __init__(self):
-
-        self.opt = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate, use_locking=True)
-        self.global_model = DeepxorModel('master')
-        policy_output, value_output, logits = self.global_model(tf.convert_to_tensor(np.random.random((1, len_solved)), dtype=tf.float32))
-        self.generator = AdiGenerator()
-        self.workers = [AdiWorker(self.global_model, self.opt, self.generator, x) for x in range(0, FLAGS.num_workers)]
-
-    def train(self):
-        for i,w in enumerate(self.workers):
-            tf.logging.info("Starting worker {}".format(i))
-            w.start()
-
-        [w.join() for w in self.workers]
-
-
-
-def adi(est, cpu_est):
-    workers = [AdiWorker('worker', x) for x in range(0, FLAGS.num_workers)]
-    worker_threads = [Thread(target=workers[i].run, daemon=True) for x in range(0,FLAGS.num_workers)]
-    for thread in worker_threads:
-        thread.start()
-        
-
-    current_step = estimator._load_global_step_from_checkpoint_dir(FLAGS.model_dir)
-    while current_step < FLAGS.train_steps:
-        next_checkpoint = min(current_step + FLAGS.train_steps_per_eval,
-                          FLAGS.train_steps)
-        tf.logging.info("Type %s" % type(next_checkpoint))
-
-        tf.logging.info('Generating ' + g_fname)
-        tf.logging.info('Predicting ...')
-        outputs = cpu_est.predict(predict_input_fn)
-        buf = []
-        for o in outputs:
-            buf.append(o)
-            if len(buf) == num_actions:
-                worker.process(buf)
-                buf = []
-
-        tf.logging.info('Writing ...')
-        worker.write()
-
-        generator.put_sample_file(g_fname)
-        tf.logging.info('Training ...')
-        est.train(train_input_fn, max_steps=next_checkpoint)
-        current_step = next_checkpoint
-
-
-def model_fn(features, labels, mode, params):
-    with tf.variable_scope(params['scope']):
-        input_layer = tf.feature_column.input_layer(features, feature_columns)
-        policy_output, value_output, logits = dual_net.create(input_layer, num_actions)
-
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            loss = tf.reduce_mean((tf.losses.mean_squared_error(tf.reshape(labels['value_output'],[-1,1]),
-                predictions=value_output) + 
-                tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
-                    logits=logits)) / (labels['distance'] + 1))
-            learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,
-                    tf.train.get_global_step(), 100000, .96)
-            optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
-            if FLAGS.use_tpu:
-                optimizer = tf.contrib.tpu.CrossShardOptimizer(optimizer)
-
-            tpu_estimator_spec = tf.contrib.tpu.TPUEstimatorSpec(
-                    mode=mode,
-                    loss=loss, 
-                    train_op=optimizer.minimize(loss, tf.train.get_global_step())
-            )
-
-        if mode == tf.estimator.ModeKeys.PREDICT:
-            predictions = {
-                    'policy_output' : policy_output,
-                    'value_output' : value_output,
-                    'reward': tf.reshape(features['reward'],[-1,1]) + value_output,
-                    'parent': features['parent'],
-                    'distance': features['distance']
-            }
-            tpu_estimator_spec = tf.contrib.tpu.TPUEstimatorSpec(
-                    mode=mode,
-                    predictions=predictions
-            )
-
-        if FLAGS.use_tpu:
-            return tpu_estimator_spec
-        else:
-            return tpu_estimator_spec.as_estimator_spec()
 
 def compute_loss(policy_output, value_output, logits, features, labels):
     loss = tf.reduce_mean((0.5*tf.losses.mean_squared_error(tf.reshape(labels['value_output'], [-1,1]),
@@ -332,29 +169,37 @@ def main(argv):
                 policy = tf.one_hot(tf.argmax(arg, 1), num_actions, 1.0, 0.0)
 
                 loss = compute_loss(policy_output, value_output, logits, features, labels)
-                global_step = tf.contrib.framework.get_or_create_global_step()
+                global_step = tf.train.get_or_create_global_step()
                 train_op = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate).minimize(loss, global_step=global_step)
-                hooks=[tf.train.StopAtStepHook(last_step=1000000)]
+                hooks=[tf.train.StopAtStepHook(last_step=100000)]
 
                 with tf.train.MonitoredTrainingSession(master=server.target,
                                            is_chief=(FLAGS.task_index == 0),
-                                           checkpoint_dir="/tmp/train_logs" + str(FLAGS.task_index),
+                                           checkpoint_dir="/tmp/train_logs",
                                            hooks=hooks) as mon_sess:
-                    while not mon_sess.should_stop():
-                        fname = generator.get_sample_file()
+                    fname = generator.get_sample_file()
+                    if not mon_sess.should_stop():
                         mon_sess.run(predict_init_op, feed_dict={filename: fname})
-                        _policy, _value, _parent, _reward, _distance = mon_sess.run([policy_output, value_output, parent, reward, distance])
-                        generator.put_sample_file(fname)
+                    while not mon_sess.should_stop():
+                        try:
+                            _policy, _value, _parent, _reward, _distance = mon_sess.run([policy_output, value_output, parent, reward, distance])
 
-                        for a,b,c,d,e,f in zip(_parent, _policy, _value, _parent, _reward, _distance):
-                            train_samples.append((a,b,c,d, e, f))
+                            for a,b,c,d,e,f in zip(_parent, _policy, _value, _parent, _reward, _distance):
+                                train_samples.append((a,b,c,d, e, f))
+                        except tf.errors.OutOfRangeError:
+                            break
+                    generator.put_sample_file(fname)
 
-                        write_samples(tname, lambda : [s for s in train_samples])
-                        train_samples.clear()
+                    write_samples(tname, lambda : train_samples)
+                    train_samples.clear()
 
+                    if not mon_sess.should_stop():
                         mon_sess.run(training_init_op, feed_dict={filename: tname})
-                        mon_sess.run(train_op)
-
+                    while not mon_sess.should_stop():
+                        try:
+                            mon_sess.run(train_op)
+                        except tf.errors.OutOfRangeError:
+                            break
 
 
 
