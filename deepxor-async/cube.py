@@ -99,9 +99,10 @@ def write_samples(fname, generator):
     
 class AdiGenerator():
     def __init__(self):
-        self.input_queue = Queue(maxsize=1)
-        self.output_queue = Queue(maxsize=1)
-        self.input_queue.put(FLAGS.data_file + '-' + str(FLAGS.task_index))
+        self.input_queue = Queue(maxsize=2)
+        self.output_queue = Queue(maxsize=2)
+        for f in [ FLAGS.data_file + '-' + str(FLAGS.task_index) + '-' + str(i) for i in range(0,2)]:
+            self.input_queue.put(f)
         self.generator_thread = Thread(target=self.generate_from_queue, daemon=True)
         self.generator_thread.start()
 
@@ -182,29 +183,37 @@ def main(argv):
                                            is_chief=(FLAGS.task_index == 0),
                                            checkpoint_dir="/tmp/train_logs",
                                            hooks=hooks) as mon_sess:
-                    fname = generator.get_sample_file()
-                    if not mon_sess.should_stop():
-                        mon_sess.run(predict_init_op, feed_dict={filename: fname})
                     while not mon_sess.should_stop():
-                        try:
-                            _policy, _value, _parent, _reward, _distance = mon_sess.run([policy_output, value_output, parent, reward, distance])
+                        fname = generator.get_sample_file()
+                        tf.logging.info('Loading predict ...')
+                        if not mon_sess.should_stop():
+                            mon_sess.run(predict_init_op, feed_dict={filename: fname})
 
-                            for a,b,c,d,e,f in zip(_parent, _policy, _value, _parent, _reward, _distance):
-                                train_samples.append((a,b,c,d, e, f))
-                        except tf.errors.OutOfRangeError:
-                            break
-                    generator.put_sample_file(fname)
+                        tf.logging.info('Predicting ...')
+                        while not mon_sess.should_stop():
+                            try:
+                                _policy, _value, _parent, _reward, _distance = mon_sess.run([policy_output, value_output, parent, reward, distance])
 
-                    write_samples(tname, lambda : train_samples)
-                    train_samples.clear()
+                                for a,b,c,d,e,f in zip(_parent, _policy, _value, _parent, _reward, _distance):
+                                    train_samples.append((a,b,c,d, e, f))
+                            except tf.errors.OutOfRangeError:
+                                break
+                        generator.put_sample_file(fname)
 
-                    if not mon_sess.should_stop():
-                        mon_sess.run(training_init_op, feed_dict={filename: tname})
-                    while not mon_sess.should_stop():
-                        try:
-                            mon_sess.run(train_op)
-                        except tf.errors.OutOfRangeError:
-                            break
+                        tf.logging.info('Writing training data ...')
+                        write_samples(tname, lambda : train_samples)
+                        train_samples.clear()
+
+                        if not mon_sess.should_stop():
+                            mon_sess.run(training_init_op, feed_dict={filename: tname})
+                        tf.logging.info('Training ...')
+                        while not mon_sess.should_stop():
+                            try:
+                                for i in range(0, FLAGS.train_steps_per_eval):
+                                    mon_sess.run(train_op)
+                                break
+                            except tf.errors.OutOfRangeError:
+                                break
 
 
 
