@@ -45,7 +45,8 @@ class Position():
 
 
 class DeepxorModel(keras.Model):
-    def __init__(self):
+    def __init__(self, scope):
+        self.scope = scope
         super(DeepxorModel, self).__init__()
         self.l_0 = layers.Dense(4096, activation=tf.nn.elu)
         self.l_1 = layers.Dense(2048, activation=tf.nn.elu)
@@ -55,9 +56,24 @@ class DeepxorModel(keras.Model):
         self.policy = layers.Softmax()
         self.values = layers.Dense(1, activation=tf.tanh)
 
-    def call(self, state):
+    def __call__(self, input_layer):
+#        with tf.variable_scope(self.scope):
+#            l_0 = tf.layers.Dense(input_layer, 4096, activation=tf.nn.elu, name='l0')
+#            l_1 = tf.layers.dense(l_0, 2048, activation=tf.nn.elu, name='l1')
+#            l_2 = tf.layers.dense(l_1, 512, activation=tf.nn.elu, name='l2')
+#            l_3 = tf.layers.dense(l_1, 512, activation=tf.nn.elu, name='l3')
+#            logits = tf.layers.dense(l_2, num_actions, name='logits')
+#            policy_output = tf.nn.softmax(logits, name='policy')
+#            value_output = tf.layers.dense(l_3, 1, activation=tf.tanh, name='value')
+#
+#            sub_layers = [l_0, l_1, l_2, l_3, logits, policy_output, value_output]
+#            self.weights = []
+#            for layer in sub_layers:
+#                self.weights += layer.trainable_weights
+#
+#            return policy_output, value_output, logits
 
-        l0 = self.l_0(state)
+        l0 = self.l_0(input_layer)
         l1 = self.l_1(l0)
         l2 = self.l_2(l1)
         l3 = self.l_3(l1)
