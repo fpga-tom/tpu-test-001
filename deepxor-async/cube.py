@@ -136,7 +136,7 @@ def main(argv):
 
     # Create and start a server for the local task.
     config = tf.ConfigProto()
-    config.gpu_options.per_process_gpu_memory_fraction = 0.1
+    config.gpu_options.per_process_gpu_memory_fraction = 0.6
     config.gpu_options.allow_growth = True
     server = tf.train.Server(cluster,
                            job_name=FLAGS.job_name,
@@ -178,7 +178,7 @@ def main(argv):
                 loss = compute_loss(policy_output, value_output, logits, features, labels)
                 global_step = tf.train.get_or_create_global_step()
                 train_op = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate).minimize(loss, global_step=global_step)
-                hooks=[tf.train.StopAtStepHook(last_step=100000)]
+                hooks=[tf.train.StopAtStepHook(last_step=FLAGS.train_steps)]
 
 
                 with tf.train.MonitoredTrainingSession(master=server.target,
@@ -221,7 +221,6 @@ def main(argv):
                                     break
                             if mon_sess.should_stop():
                                 break
-
 
 
 if __name__ == "__main__":

@@ -14,6 +14,8 @@ tf.flags.DEFINE_integer("iterations", default=50, help="Number of iterations per
 tf.flags.DEFINE_integer("num_shards", default=8, help="Number of shards (TPU chips)")
 
 FLAGS = tf.flags.FLAGS
+import sys
+sys.setrecursionlimit(5000)
 
 def play(network):
     readouts = FLAGS.num_readouts
