@@ -177,7 +177,9 @@ def main(argv):
 
                 loss = compute_loss(policy_output, value_output, logits, features, labels)
                 global_step = tf.train.get_or_create_global_step()
-                train_op = tf.train.GradientDescentOptimizer(learning_rate=FLAGS.learning_rate).minimize(loss, global_step=global_step)
+                learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,
+                                        global_step, 100000, .96)
+                train_op = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss, global_step=global_step)
                 hooks=[tf.train.StopAtStepHook(last_step=FLAGS.train_steps)]
 
 
