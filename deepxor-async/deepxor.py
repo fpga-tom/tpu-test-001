@@ -5,8 +5,9 @@ import tensorflow as tf
 from tensorflow.python import keras
 from tensorflow.python.keras import layers
 
-#solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1]
-solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0]
+solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1]
+#solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0]
+#MODEL_DIR=/home/tomas/Documents/deepxor-async-gd-half-1
 len_solved = len(solved)
 num_actions = len_solved
 
