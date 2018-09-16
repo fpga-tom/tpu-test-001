@@ -77,7 +77,7 @@ def predict_input_fn(fname):
 def train_input_fn(fname):
     ds = tf.data.TFRecordDataset(fname)
     ds = ds.map(_parse_function)
-    return ds.repeat().shuffle(buffer_size=FLAGS.rolls*FLAGS.rolls_len).batch(FLAGS.batch_size)
+    return ds.shuffle(buffer_size=FLAGS.rolls*FLAGS.rolls_len).batch(FLAGS.batch_size)
 
 def _floats_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
@@ -171,7 +171,8 @@ def main(argv):
                 arg = tf.reshape(labels['reward'] + value_output, [x_num_actions, num_actions])
                 parent = tf.reshape(labels['parent'], [x_num_actions, num_actions, len_solved])[:,0,:]
                 distance = tf.reshape(features['distance'], [x_num_actions, num_actions])[:,0]
-                reward = tf.reduce_max(arg, 1)
+                reward = tf.reshape(labels['reward'], [x_num_actions, num_actions])[:,0]
+                value = tf.reduce_max(arg, 1)
                 policy = tf.one_hot(tf.argmax(arg, 1), num_actions, 1.0, 0.0)
 
                 loss = compute_loss(policy_output, value_output, logits, features, labels)
@@ -195,7 +196,9 @@ def main(argv):
                         tf.logging.info('Predicting ...')
                         while not mon_sess.should_stop():
                             try:
-                                _policy, _value, _parent, _reward, _distance = mon_sess.run([policy_output, value_output, parent, reward, distance])
+                                _policy, _value, _parent, _reward, _distance = mon_sess.run([policy, value, parent, reward, distance])
+
+#                                print(_policy.shape, _value.shape, _parent.shape, _reward.shape, _distance.shape)
 
                                 for a,b,c,d,e,f in zip(_parent, _policy, _value, _parent, _reward, _distance):
                                     train_samples.append((a,b,c,d, e, f))
@@ -210,12 +213,13 @@ def main(argv):
                         if not mon_sess.should_stop():
                             mon_sess.run(training_init_op, feed_dict={filename: tname})
                         tf.logging.info('Training ...')
-                        while not mon_sess.should_stop():
-                            try:
-                                for i in range(0, FLAGS.train_steps_per_eval):
-                                    mon_sess.run(train_op)
-                                break
-                            except tf.errors.OutOfRangeError:
+                        for i in range(0, FLAGS.train_steps_per_eval):
+                            while not mon_sess.should_stop():
+                                try:
+                                        mon_sess.run(train_op)
+                                except tf.errors.OutOfRangeError:
+                                    break
+                            if mon_sess.should_stop():
                                 break
 
 
