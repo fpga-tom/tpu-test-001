@@ -151,8 +151,8 @@ def main(argv):
     #elif FLAGS.job_name == "worker":
     generator = AdiGenerator()
     train_samples = []
-    tname = FLAGS.train_file + '-' + str(FLAGS.task_index)
-    local_model = DeepxorModel('worker-' + str(FLAGS.task_index))
+    tname = FLAGS.train_file + '-' + str(hvd.rank())
+    local_model = DeepxorModel('worker-' + str(hvd.rank()))
 
     #with tf.device(tf.train.replica_device_setter(
     #    worker_device="/job:worker/task:%d" % FLAGS.task_index,
@@ -194,7 +194,6 @@ def main(argv):
 
 
     with tf.train.MonitoredTrainingSession(config=config,
-                               is_chief=(FLAGS.task_index == 0),
                                checkpoint_dir=FLAGS.model_dir if hvd.rank() == 0 else None,
                                save_checkpoint_secs=None,
                                save_checkpoint_steps=FLAGS.checkpoint_steps,
