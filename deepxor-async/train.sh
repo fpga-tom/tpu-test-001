@@ -4,9 +4,9 @@ WORKERS=`seq 0 7`
 WORKER_HOSTS=''
 for idx in $WORKERS; do
 	if [ "$idx" -eq "0" ]; then
-		WORKER_HOSTS=localhost:$((2223+$idx))
+		WORKER_HOSTS=192.168.2.149:$((2223+$idx))
 	else
-		WORKER_HOSTS=$WORKER_HOSTS,localhost:$((2223+$idx))
+		WORKER_HOSTS=$WORKER_HOSTS,192.168.2.149:$((2223+$idx))
 	fi
 done
 WORKER_HOSTS=$WORKER_HOSTS,192.168.2.103:2250
