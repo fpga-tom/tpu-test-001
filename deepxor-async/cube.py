@@ -10,6 +10,9 @@ from tensorflow.python.estimator import estimator
 import dual_net
 from deepxor import solved, len_solved, num_actions, apply_action, reward, DeepxorModel
 from tensorflow.python import keras
+import horovod.tensorflow as hvd
+
+hvd.init()
 
 #tf.enable_eager_execution()
 
@@ -102,7 +105,7 @@ class AdiGenerator():
     def __init__(self):
         self.input_queue = Queue(maxsize=2)
         self.output_queue = Queue(maxsize=2)
-        for f in [ FLAGS.data_file + '-' + str(FLAGS.task_index) + '-' + str(i) for i in range(0,2)]:
+        for f in [ FLAGS.data_file + '-' + str(hvd.rank()) + '-' + str(i) for i in range(0,2)]:
             self.input_queue.put(f)
         self.generator_thread = Thread(target=self.generate_from_queue, daemon=True)
         self.generator_thread.start()
@@ -138,91 +141,98 @@ def main(argv):
     config = tf.ConfigProto()
     config.gpu_options.per_process_gpu_memory_fraction = 0.6
     config.gpu_options.allow_growth = True
-    server = tf.train.Server(cluster,
-                           job_name=FLAGS.job_name,
-                           task_index=FLAGS.task_index,
-                           config=config)
+    #server = tf.train.Server(cluster,
+    #                       job_name=FLAGS.job_name,
+    #                       task_index=FLAGS.task_index,
+    #                       config=config)
 
-    if FLAGS.job_name == "ps":
-        server.join()
-    elif FLAGS.job_name == "worker":
-        generator = AdiGenerator()
-        train_samples = []
-        tname = FLAGS.train_file + '-' + str(FLAGS.task_index)
-        local_model = DeepxorModel('worker-' + str(FLAGS.task_index))
-        with tf.device(tf.train.replica_device_setter(
-            worker_device="/job:worker/task:%d" % FLAGS.task_index,
-            cluster=cluster)):
+    #if FLAGS.job_name == "ps":
+    #    server.join()
+    #elif FLAGS.job_name == "worker":
+    generator = AdiGenerator()
+    train_samples = []
+    tname = FLAGS.train_file + '-' + str(FLAGS.task_index)
+    local_model = DeepxorModel('worker-' + str(FLAGS.task_index))
 
-                filename = tf.placeholder(tf.string, shape=[])
-                predict_dataset = predict_input_fn(filename)
-                training_dataset = train_input_fn(filename)
-                iterator = tf.data.Iterator.from_structure(predict_dataset.output_types, predict_dataset.output_shapes)
-                next_element = iterator.get_next()
-                predict_init_op = iterator.make_initializer(predict_dataset)
-                training_init_op = iterator.make_initializer(training_dataset)
+    #with tf.device(tf.train.replica_device_setter(
+    #    worker_device="/job:worker/task:%d" % FLAGS.task_index,
+    #    cluster=cluster)):
 
-                features, labels = next_element
+    filename = tf.placeholder(tf.string, shape=[])
+    predict_dataset = predict_input_fn(filename)
+    training_dataset = train_input_fn(filename)
+    iterator = tf.data.Iterator.from_structure(predict_dataset.output_types, predict_dataset.output_shapes)
+    next_element = iterator.get_next()
+    predict_init_op = iterator.make_initializer(predict_dataset)
+    training_init_op = iterator.make_initializer(training_dataset)
 
-                policy_output, value_output, logits = local_model(features['state'])
+    features, labels = next_element
 
-                x_num_actions = FLAGS.rolls_len
+    policy_output, value_output, logits = local_model(features['state'])
 
-                arg = tf.reshape(labels['reward'] + value_output, [x_num_actions, num_actions])
-                parent = tf.reshape(labels['parent'], [x_num_actions, num_actions, len_solved])[:,0,:]
-                distance = tf.reshape(features['distance'], [x_num_actions, num_actions])[:,0]
-                reward = tf.reshape(labels['reward'], [x_num_actions, num_actions])[:,0]
-                value = tf.reduce_max(arg, 1)
-                policy = tf.one_hot(tf.argmax(arg, 1), num_actions, 1.0, 0.0)
+    x_num_actions = FLAGS.rolls_len
 
-                loss = compute_loss(policy_output, value_output, logits, features, labels)
-                global_step = tf.train.get_or_create_global_step()
-                learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,
-                                        global_step, 100000, .96)
-                train_op = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(loss, global_step=global_step)
-                hooks=[tf.train.StopAtStepHook(last_step=FLAGS.train_steps)]
+    arg = tf.reshape(labels['reward'] + value_output, [x_num_actions, num_actions])
+    parent = tf.reshape(labels['parent'], [x_num_actions, num_actions, len_solved])[:,0,:]
+    distance = tf.reshape(features['distance'], [x_num_actions, num_actions])[:,0]
+    reward = tf.reshape(labels['reward'], [x_num_actions, num_actions])[:,0]
+    value = tf.reduce_max(arg, 1)
+    policy = tf.one_hot(tf.argmax(arg, 1), num_actions, 1.0, 0.0)
+
+    loss = compute_loss(policy_output, value_output, logits, features, labels)
+    global_step = tf.train.get_or_create_global_step()
+    learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,
+                            global_step, 100000, .96)
+
+    opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+    opt = hvd.DistributedOptimizer(opt)
+
+    train_op = opt.minimize(loss, global_step=global_step)
+    hooks=[hvd.BroadcastGlobalVariablesHook(0),
+            tf.train.StopAtStepHook(last_step=FLAGS.train_steps),
+            tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss}, every_n_iter=100)]
 
 
-                with tf.train.MonitoredTrainingSession(master=server.target,
-                                           is_chief=(FLAGS.task_index == 0),
-                                           checkpoint_dir=FLAGS.model_dir,
-                                           save_checkpoint_secs=None,
-                                           save_checkpoint_steps=FLAGS.checkpoint_steps,
-                                           hooks=hooks) as mon_sess:
-                    while not mon_sess.should_stop():
-                        fname = generator.get_sample_file()
-                        tf.logging.info('Loading predict ...')
-                        if not mon_sess.should_stop():
-                            mon_sess.run(predict_init_op, feed_dict={filename: fname})
+    with tf.train.MonitoredTrainingSession(config=config,
+                               is_chief=(FLAGS.task_index == 0),
+                               checkpoint_dir=FLAGS.model_dir if hvd.rank() == 0 else None,
+                               save_checkpoint_secs=None,
+                               save_checkpoint_steps=FLAGS.checkpoint_steps,
+                               hooks=hooks) as mon_sess:
+        while not mon_sess.should_stop():
+            fname = generator.get_sample_file()
+            tf.logging.info('Loading predict ...')
+            if not mon_sess.should_stop():
+                mon_sess.run(predict_init_op, feed_dict={filename: fname})
 
-                        tf.logging.info('Predicting ...')
-                        while not mon_sess.should_stop():
-                            try:
-                                _policy, _value, _parent, _reward, _distance = mon_sess.run([policy, value, parent, reward, distance])
+            tf.logging.info('Predicting ...')
+            while not mon_sess.should_stop():
+                try:
+                    _policy, _value, _parent, _reward, _distance = mon_sess.run([policy, value, parent, reward, distance])
 
 #                                print(_policy.shape, _value.shape, _parent.shape, _reward.shape, _distance.shape)
 
-                                for a,b,c,d,e,f in zip(_parent, _policy, _value, _parent, _reward, _distance):
-                                    train_samples.append((a,b,c,d, e, f))
-                            except tf.errors.OutOfRangeError:
-                                break
-                        generator.put_sample_file(fname)
+                    for a,b,c,d,e,f in zip(_parent, _policy, _value, _parent, _reward, _distance):
+                        train_samples.append((a,b,c,d, e, f))
+                except tf.errors.OutOfRangeError:
+                    break
+            generator.put_sample_file(fname)
 
-                        tf.logging.info('Writing training data ...')
-                        write_samples(tname, lambda : train_samples)
-                        train_samples.clear()
+            tf.logging.info('Writing training data ...')
+            write_samples(tname, lambda : train_samples)
+            train_samples.clear()
 
-                        if not mon_sess.should_stop():
-                            mon_sess.run(training_init_op, feed_dict={filename: tname})
-                        tf.logging.info('Training ...')
-                        for i in range(0, FLAGS.train_steps_per_eval):
-                            while not mon_sess.should_stop():
-                                try:
-                                        mon_sess.run(train_op)
-                                except tf.errors.OutOfRangeError:
-                                    break
-                            if mon_sess.should_stop():
-                                break
+            if not mon_sess.should_stop():
+                mon_sess.run(training_init_op, feed_dict={filename: tname})
+            tf.logging.info('Training ...')
+            for i in range(0, FLAGS.train_steps_per_eval):
+                while not mon_sess.should_stop():
+                    try:
+                            mon_sess.run(train_op)
+                    except tf.errors.OutOfRangeError:
+                        break
+                if mon_sess.should_stop():
+                    break
 
 
 if __name__ == "__main__":
