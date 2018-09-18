@@ -57,10 +57,10 @@ def _generate():
     for j in range(0,FLAGS.rolls):
         current = solved
         for i in range(0,FLAGS.rolls_len):
+            current = apply_action(current, random.randint(0,num_actions-1))
             for a in range(0, num_actions):
                 state = apply_action(current, a)
-                yield state, np.zeros([num_actions]), 0, current, reward(state), i
-            current = apply_action(current, random.randint(0,num_actions-1))
+                yield state, np.zeros([num_actions]), 0, current, reward(state), i + 1
 
 def _parse_function(example_proto):
      keys_to_features = {'state':tf.FixedLenFeature((len_solved), tf.float32),
@@ -127,7 +127,7 @@ def compute_loss(policy_output, value_output, logits, features, labels):
     loss = tf.reduce_mean((0.1*tf.losses.mean_squared_error(tf.reshape(labels['value_output'], [-1,1]),
         predictions=value_output) + 
         tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
-            logits=logits)) / (features['distance'] + 1.0)) + tf.losses.get_regularization_loss()
+            logits=logits)) / features['distance']) + tf.losses.get_regularization_loss()
     return loss
 
 def main(argv):
