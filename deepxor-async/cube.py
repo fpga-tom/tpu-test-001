@@ -80,7 +80,7 @@ def predict_input_fn(fname):
 def train_input_fn(fname):
     ds = tf.data.TFRecordDataset(fname)
     ds = ds.map(_parse_function)
-    return ds.shuffle(buffer_size=FLAGS.rolls*FLAGS.rolls_len).batch(FLAGS.batch_size)
+    return ds.repeat(count=FLAGS.train_steps_per_eval).shuffle(buffer_size=FLAGS.rolls*FLAGS.rolls_len).batch(FLAGS.batch_size)
 
 def _floats_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
@@ -103,9 +103,9 @@ def write_samples(fname, generator):
     
 class AdiGenerator():
     def __init__(self):
-        self.input_queue = Queue(maxsize=2)
-        self.output_queue = Queue(maxsize=2)
-        for f in [ FLAGS.data_file + '-' + str(hvd.rank()) + '-' + str(i) for i in range(0,2)]:
+        self.input_queue = Queue(maxsize=3)
+        self.output_queue = Queue(maxsize=3)
+        for f in [ FLAGS.data_file + '-' + str(hvd.rank()) + '-' + str(i) for i in range(0,3)]:
             self.input_queue.put(f)
         self.generator_thread = Thread(target=self.generate_from_queue, daemon=True)
         self.generator_thread.start()
@@ -123,7 +123,7 @@ class AdiGenerator():
         self.input_queue.put(fname)
 
 def compute_loss(policy_output, value_output, logits, features, labels):
-    loss = tf.reduce_mean((0.5*tf.losses.mean_squared_error(tf.reshape(labels['value_output'], [-1,1]),
+    loss = tf.reduce_mean((0.8*tf.losses.mean_squared_error(tf.reshape(labels['value_output'], [-1,1]),
         predictions=value_output) + 
         tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
             logits=logits)) / (features['distance'] + 1.0))
@@ -158,9 +158,10 @@ def main(argv):
     #    worker_device="/job:worker/task:%d" % FLAGS.task_index,
     #    cluster=cluster)):
 
-    filename = tf.placeholder(tf.string, shape=[])
-    predict_dataset = predict_input_fn(filename)
-    training_dataset = train_input_fn(filename)
+    filename_predict = tf.placeholder(tf.string, shape=[])
+    filename_training = tf.placeholder(tf.string, shape=[])
+    predict_dataset = predict_input_fn(filename_predict)
+    training_dataset = train_input_fn(filename_training)
     iterator = tf.data.Iterator.from_structure(predict_dataset.output_types, predict_dataset.output_shapes)
     next_element = iterator.get_next()
     predict_init_op = iterator.make_initializer(predict_dataset)
@@ -184,13 +185,13 @@ def main(argv):
     learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,
                             global_step, 100000, .96)
 
-    opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+    opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
     opt = hvd.DistributedOptimizer(opt)
 
     train_op = opt.minimize(loss, global_step=global_step)
     hooks=[hvd.BroadcastGlobalVariablesHook(0),
             tf.train.StopAtStepHook(last_step=FLAGS.train_steps),
-            tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss}, every_n_iter=100)]
+            tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss}, every_n_iter=1000)]
 
 
     with tf.train.MonitoredTrainingSession(config=config,
@@ -199,17 +200,15 @@ def main(argv):
                                save_checkpoint_steps=FLAGS.checkpoint_steps,
                                hooks=hooks) as mon_sess:
         while not mon_sess.should_stop():
-            fname = generator.get_sample_file()
             tf.logging.info('Loading predict ...')
+            fname = generator.get_sample_file()
             if not mon_sess.should_stop():
-                mon_sess.run(predict_init_op, feed_dict={filename: fname})
+                mon_sess.run(predict_init_op, feed_dict={filename_predict: fname})
 
             tf.logging.info('Predicting ...')
             while not mon_sess.should_stop():
                 try:
                     _policy, _value, _parent, _reward, _distance = mon_sess.run([policy, value, parent, reward, distance])
-
-#                                print(_policy.shape, _value.shape, _parent.shape, _reward.shape, _distance.shape)
 
                     for a,b,c,d,e,f in zip(_parent, _policy, _value, _parent, _reward, _distance):
                         train_samples.append((a,b,c,d, e, f))
@@ -222,15 +221,12 @@ def main(argv):
             train_samples.clear()
 
             if not mon_sess.should_stop():
-                mon_sess.run(training_init_op, feed_dict={filename: tname})
+                mon_sess.run(training_init_op, feed_dict={filename_training: tname})
             tf.logging.info('Training ...')
-            for i in range(0, FLAGS.train_steps_per_eval):
-                while not mon_sess.should_stop():
-                    try:
-                            mon_sess.run(train_op)
-                    except tf.errors.OutOfRangeError:
-                        break
-                if mon_sess.should_stop():
+            while not mon_sess.should_stop():
+                try:
+                        mon_sess.run(train_op)
+                except tf.errors.OutOfRangeError:
                     break
 
 

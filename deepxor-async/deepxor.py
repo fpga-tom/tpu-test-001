@@ -50,9 +50,8 @@ class DeepxorModel(keras.Model):
     def __init__(self, scope):
         self.scope = scope
         super(DeepxorModel, self).__init__()
-        self.l_00 = layers.Dense(4096, activation=tf.nn.elu)
-        self.l_0 = layers.Dense(2048, activation=tf.nn.elu)
-        self.l_1 = layers.Dense(1024, activation=tf.nn.elu)
+        self.l_0 = layers.Dense(4096, activation=tf.nn.elu)
+        self.l_1 = layers.Dense(2048, activation=tf.nn.elu)
         self.l_2 = layers.Dense(512, activation=tf.nn.elu)
         self.l_3 = layers.Dense(512, activation=tf.nn.elu)
         self.logits = layers.Dense(num_actions)
@@ -76,8 +75,7 @@ class DeepxorModel(keras.Model):
 #
 #            return policy_output, value_output, logits
 
-        l00 = self.l_00(input_layer)
-        l0 = self.l_0(l00)
+        l0 = self.l_0(input_layer)
         l1 = self.l_1(l0)
         l2 = self.l_2(l1)
         l3 = self.l_3(l1)
