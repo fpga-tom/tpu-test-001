@@ -5,6 +5,10 @@ import tensorflow as tf
 from tensorflow.python import keras
 from tensorflow.python.keras import layers
 
+tf.flags.DEFINE_float("l2", default=1e-4, help="momentum")
+
+FLAGS = tf.flags.FLAGS
+
 solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1]
 #solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0]
 #MODEL_DIR=/home/tomas/Documents/deepxor-async-gd-half-1
@@ -50,10 +54,10 @@ class DeepxorModel(keras.Model):
     def __init__(self, scope):
         self.scope = scope
         super(DeepxorModel, self).__init__()
-        self.l_0 = layers.Dense(4096, activation=tf.nn.elu)
-        self.l_1 = layers.Dense(2048, activation=tf.nn.elu)
-        self.l_2 = layers.Dense(512, activation=tf.nn.elu)
-        self.l_3 = layers.Dense(512, activation=tf.nn.elu)
+        self.l_0 = layers.Dense(4096, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2))
+        self.l_1 = layers.Dense(2048, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2))
+        self.l_2 = layers.Dense(512, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2))
+        self.l_3 = layers.Dense(512, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2))
         self.logits = layers.Dense(num_actions)
         self.policy = layers.Softmax()
         self.values = layers.Dense(1, activation=tf.tanh)
