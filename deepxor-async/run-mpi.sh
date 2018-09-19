@@ -1,4 +1,4 @@
-MODEL_DIR=gs://tomaskrajco-tpu-test-001-bucket/deepxor-allreduce-momentum-8
+MODEL_DIR=gs://tomaskrajco-tpu-test-001-bucket/deepxor-allreduce-momentum-11
 HOROVOD_FUSION_THRESHOLD=134217728 mpirun -x HOROVOD_FUSION_THRESHOLD \
 	-np 1 \
 	-bind-to none -map-by slot \
