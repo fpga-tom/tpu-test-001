@@ -1,3 +1,4 @@
+import os
 import itertools
 import random
 import tensorflow as tf
@@ -10,23 +11,11 @@ from tensorflow.python.estimator import estimator
 import dual_net
 from deepxor import solved, len_solved, num_actions, apply_action, reward, DeepxorModel
 from tensorflow.python import keras
-import horovod.tensorflow as hvd
 from hyper_net import Network
 import selfplay
 
-hvd.init()
-
-#tf.enable_eager_execution()
-
-tf.flags.DEFINE_string("tpu", default=None, help="TPU which to use")
-tf.flags.DEFINE_string("tpu_zone", default=None, help="GCE zone of TPU" )
-tf.flags.DEFINE_string("gcp_project", default=None, help="Project name of TPU enabled project")
-
-tf.flags.DEFINE_bool("use_tpu", default=False, help="Use TPU rather than CPU")
 tf.flags.DEFINE_string("model_dir", default=None, help="Estimator model dir")
 tf.flags.DEFINE_integer("batch_size", default=8, help="Batch size")
-tf.flags.DEFINE_integer("iterations", default=50, help="Number of iterations per TPU loop")
-tf.flags.DEFINE_integer("num_shards", default=8, help="Number of shards (TPU chips)")
 tf.flags.DEFINE_float("learning_rate", default=.1, help="Learning rate")
 tf.flags.DEFINE_float("momentum", default=.9, help="momentum")
 tf.flags.DEFINE_float("value_weight", default=.1, help="value weight")
@@ -34,16 +23,12 @@ tf.flags.DEFINE_integer("train_steps", default=1000, help="training steps")
 tf.flags.DEFINE_integer("train_steps_per_eval", default=100, help="training steps per train call")
 tf.flags.DEFINE_string("data_file", default="/tmp/predict.tfrecord", help="Input data file")
 tf.flags.DEFINE_string("train_file", default="/tmp/train.tfrecord", help="Input data file")
-tf.flags.DEFINE_string("sample_file", default="./X_input.tfrecord", help="Samples data file")
+tf.flags.DEFINE_string("job_dir", default="./summary", help="summary output")
 tf.flags.DEFINE_integer("rolls", default=150, help="Number of rolls")
 tf.flags.DEFINE_integer("rolls_len", default=50, help="Length of one roll")
-tf.flags.DEFINE_integer("num_workers", default=1, help="Number of worker threads")
 tf.flags.DEFINE_integer("num_generators", default=2, help="Number of generator threads")
-tf.flags.DEFINE_string("ps_hosts", default="localhost:2222", help="Parameter server host")
-tf.flags.DEFINE_string("worker_hosts", default="localhost:22232", help="Worker host")
-tf.flags.DEFINE_string("job_name", default="ps", help="Id of host")
-tf.flags.DEFINE_integer("task_index", default=0, help="Index of host")
 tf.flags.DEFINE_integer("checkpoint_steps", default=500, help="Checkpoint")
+tf.flags.DEFINE_integer("eval_steps", default=5, help="When to eval")
 
 FLAGS = tf.flags.FLAGS
 
@@ -68,7 +53,7 @@ def _parse_function(example_proto):
      return {'state': parsed_features['state'], 'distance': parsed_features['distance']}, {'policy_output': parsed_features['policy_output'], 'value_output': parsed_features['value_output'], 'parent': parsed_features['parent'], 'reward': parsed_features['reward']}
 
 def _tensor_map(tensor):
-     return {'state': tensor, 'distance': 0}, {'policy_output': np.zeros([num_actions]), 'value_output': 0 , 'parent': np.zeros([len_solved]), 'reward': 0}
+     return {'state': tensor, 'distance': tf.constant([0.])}, {'policy_output': tf.constant(np.zeros([num_actions], dtype='float32')), 'value_output': tf.constant([0.]) , 'parent': tf.constant(np.zeros([len_solved],dtype='float32')), 'reward': tf.constant([0.])}
 
 def predict_input_fn(fname):
     ds = tf.data.TFRecordDataset(fname)
@@ -81,9 +66,9 @@ def train_input_fn(fname):
     return ds.repeat(count=FLAGS.train_steps_per_eval).shuffle(buffer_size=FLAGS.rolls*FLAGS.rolls_len).batch(FLAGS.batch_size)
 
 def eval_input_fn(tensor):
-    ds = tf.data.Dataset.from_tensor_slices(tensor)
+    ds = tf.data.Dataset.from_tensors(tensor)
     ds = ds.map(_tensor_map)
-    return ds
+    return ds.batch(1)
 
 def _floats_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
@@ -108,7 +93,7 @@ class AdiGenerator():
     def __init__(self):
         self.input_queue = Queue(maxsize=3)
         self.output_queue = Queue(maxsize=3)
-        for f in [ FLAGS.data_file + '-' + str(hvd.rank()) + '-' + str(i) for i in range(0,3)]:
+        for f in [ FLAGS.data_file + '-' + str(i) for i in range(0,3)]:
             self.input_queue.put(f)
         self.generator_thread = Thread(target=self.generate_from_queue, daemon=True)
         self.generator_thread.start()
@@ -128,7 +113,7 @@ class AdiGenerator():
 def compute_loss(policy_output, value_output, logits, features, labels):
     loss = tf.reduce_mean((FLAGS.value_weight*tf.losses.mean_squared_error(tf.reshape(labels['value_output'], [-1,1]),
         predictions=value_output) + 
-        tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
+        tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels['policy_output'],
             logits=logits)) / features['distance']) + tf.losses.get_regularization_loss()
     return loss
 
@@ -142,23 +127,25 @@ def main(argv):
 
     generator = AdiGenerator()
     train_samples = []
-    tname = FLAGS.train_file + '-' + str(hvd.rank())
-    local_model = DeepxorModel('worker-' + str(hvd.rank()))
+    tname = FLAGS.train_file
+    local_model = DeepxorModel('worker')
 
 
     filename_predict = tf.placeholder(tf.string, shape=[])
     filename_training = tf.placeholder(tf.string, shape=[])
     tensor_eval = tf.placeholder(tf.float32, shape=[len_solved])
+    eval_path = os.path.join(FLAGS.job_dir, 'hamming_distance')
+    hamming_distance = tf.placeholder(tf.int64, shape=[])
 
     predict_dataset = predict_input_fn(filename_predict)
     training_dataset = train_input_fn(filename_training)
     eval_dataset = eval_input_fn(tensor_eval)
 
     iterator = tf.data.Iterator.from_structure(predict_dataset.output_types, predict_dataset.output_shapes)
-    next_element = iterator.get_next()
     predict_init_op = iterator.make_initializer(predict_dataset)
     training_init_op = iterator.make_initializer(training_dataset)
     eval_init_op = iterator.make_initializer(eval_dataset)
+    next_element = iterator.get_next()
 
     features, labels = next_element
 
@@ -179,25 +166,32 @@ def main(argv):
                             global_step, 100000, .96)
 
     opt = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=FLAGS.momentum)
-    opt = hvd.DistributedOptimizer(opt)
 
     train_op = opt.minimize(loss, global_step=global_step)
-    hooks=[hvd.BroadcastGlobalVariablesHook(0),
-            tf.train.StopAtStepHook(last_step=FLAGS.train_steps),
-            tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss}, every_n_iter=1000)]
+    hooks=[ tf.train.StopAtStepHook(last_step=FLAGS.train_steps) ]
+#            tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss}, every_n_iter=1000)]
 
+
+    current_step = 0
+    next_selfplay = FLAGS.eval_steps
+
+    tf.summary.scalar('hamming_distance', hamming_distance)
+    merged_summary_op = tf.summary.merge_all()
 
     with tf.train.MonitoredTrainingSession(config=config,
-                               checkpoint_dir=FLAGS.model_dir if hvd.rank() == 0 else None,
+                               checkpoint_dir=FLAGS.model_dir,
                                save_checkpoint_secs=None,
                                save_checkpoint_steps=FLAGS.checkpoint_steps,
                                hooks=hooks) as mon_sess:
+
+        summary_writer = tf.summary.FileWriter(eval_path, graph=tf.get_default_graph())
+
         network = Network(mon_sess, policy_output, value_output, tensor_eval, eval_init_op)
         while not mon_sess.should_stop():
             tf.logging.info('Loading predict ...')
             fname = generator.get_sample_file()
             if not mon_sess.should_stop():
-                mon_sess.run(predict_init_op, feed_dict={filename_predict: fname})
+                mon_sess.run(predict_init_op, feed_dict={filename_predict: fname, hamming_distance: 0})
 
             tf.logging.info('Predicting ...')
             while not mon_sess.should_stop():
@@ -215,15 +209,22 @@ def main(argv):
             train_samples.clear()
 
             if not mon_sess.should_stop():
-                mon_sess.run(training_init_op, feed_dict={filename_training: tname})
+                mon_sess.run(training_init_op, feed_dict={filename_training: tname, hamming_distance: 0})
             tf.logging.info('Training ...')
             while not mon_sess.should_stop():
                 try:
-                        mon_sess.run(train_op)
+                    mon_sess.run(train_op, feed_dict={hamming_distance: 0})
                 except tf.errors.OutOfRangeError:
                     break
-        selfplay.play(network)
+            current_step += 1
+            if not mon_sess.should_stop() and next_selfplay == current_step:
+                hd = selfplay.play(network)
+                summary = mon_sess.run([merged_summary_op], feed_dict={hamming_distance: hd})
+                summary_writer.add_summary(summary[0])
+                summary_writer.flush()
+                next_selfplay = current_step + FLAGS.eval_steps
 
+        summary_writer.close()
 
 if __name__ == "__main__":
     tf.app.run()

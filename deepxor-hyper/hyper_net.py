@@ -10,7 +10,7 @@ class Network():
     def predict(self, features):
         self.sess.run(self.eval_init_op, feed_dict={self.tensor_eval: features})
         policy, value = self.sess.run([self.policy_output, self.value_output])
-        return policy, value
+        return policy[0], value[0]
 
     def run_many(self, positions):
         return zip(*[self.predict(p.state) for p in positions])
