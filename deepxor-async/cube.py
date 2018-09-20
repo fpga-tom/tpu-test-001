@@ -27,6 +27,7 @@ tf.flags.DEFINE_integer("iterations", default=50, help="Number of iterations per
 tf.flags.DEFINE_integer("num_shards", default=8, help="Number of shards (TPU chips)")
 tf.flags.DEFINE_float("learning_rate", default=.1, help="Learning rate")
 tf.flags.DEFINE_float("momentum", default=.9, help="momentum")
+tf.flags.DEFINE_float("value_weight", default=.1, help="value weight")
 tf.flags.DEFINE_integer("train_steps", default=1000, help="training steps")
 tf.flags.DEFINE_integer("train_steps_per_eval", default=100, help="training steps per train call")
 tf.flags.DEFINE_string("data_file", default="/tmp/predict.tfrecord", help="Input data file")
@@ -124,7 +125,7 @@ class AdiGenerator():
         self.input_queue.put(fname)
 
 def compute_loss(policy_output, value_output, logits, features, labels):
-    loss = tf.reduce_mean((.1*tf.losses.mean_squared_error(tf.reshape(labels['value_output'], [-1,1]),
+    loss = tf.reduce_mean((FLAGS.value_weight*tf.losses.mean_squared_error(tf.reshape(labels['value_output'], [-1,1]),
         predictions=value_output) + 
         tf.nn.softmax_cross_entropy_with_logits(labels=labels['policy_output'],
             logits=logits)) / features['distance']) + tf.losses.get_regularization_loss()
