@@ -23,7 +23,7 @@ tf.flags.DEFINE_integer("train_steps", default=1000, help="training steps")
 tf.flags.DEFINE_integer("train_steps_per_eval", default=100, help="training steps per train call")
 tf.flags.DEFINE_string("data_file", default="/tmp/predict.tfrecord", help="Input data file")
 tf.flags.DEFINE_string("train_file", default="/tmp/train.tfrecord", help="Input data file")
-tf.flags.DEFINE_string("job_dir", default="./summary", help="summary output")
+tf.flags.DEFINE_string("job-dir", default="./summary", help="summary output")
 tf.flags.DEFINE_integer("rolls", default=150, help="Number of rolls")
 tf.flags.DEFINE_integer("rolls_len", default=50, help="Length of one roll")
 tf.flags.DEFINE_integer("num_generators", default=2, help="Number of generator threads")
@@ -135,7 +135,7 @@ def main(argv):
     filename_training = tf.placeholder(tf.string, shape=[])
     tensor_eval = tf.placeholder(tf.float32, shape=[len_solved])
     trial = json.loads(os.environ.get('TF_CONFIG', '{}')).get('task', {}).get('trial', '')
-    eval_path = os.path.join(FLAGS.job_dir, trial, 'hamming_distance')
+    eval_path = os.path.join(FLAGS.model_dir, trial, 'hamming_distance')
     hamming_distance = tf.placeholder(tf.int64, shape=[])
 
     predict_dataset = predict_input_fn(filename_predict)
@@ -187,6 +187,7 @@ def main(argv):
     )
     hd = len_solved
 
+    tf.logging.info('Eval path: ' + eval_path)
     summary_writer = tf.summary.FileWriter(eval_path)
     with tf.train.MonitoredTrainingSession(config=config,
                                checkpoint_dir=output_dir,
