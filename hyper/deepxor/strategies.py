@@ -3,10 +3,10 @@ Implements MCTS tree search
 """
 
 import random
-import deepxor.deepxor
+from deepxor.deepxor import Position
 import numpy as np
 from absl import flags
-import deepxor.mcts
+from deepxor.mcts import MCTSNode
 
 flags.DEFINE_integer('softpick_move_cutoff', 100, 'The move number (<) up to which are moves softpicked from MCTS visits.')
 flags.DEFINE_integer('parallel_readouts', 8, 'Number of searches to execute in parallel. Also neural network batch size')
@@ -24,8 +24,8 @@ class MCTSPlayer(object):
 
     def initialize_game(self, position=None):
         if position is None:
-            position = deepxor.Position()
-        self.root = mcts.MCTSNode(position)
+            position = Position()
+        self.root = MCTSNode(position)
 
     def play_move(self, move):
         self.root = self.root.maybe_add_child(move)
