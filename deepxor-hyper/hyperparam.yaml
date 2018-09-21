@@ -9,8 +9,8 @@ trainingInput:
     params:
     - parameterName: l2
       type: DOUBLE
-      minValue: 1e-3
-      maxValue: 1e-1
+      minValue: 0.001
+      maxValue: 0.1
       scaleType: UNIT_LINEAR_SCALE
     - parameterName: batch_size
       type: DISCRETE

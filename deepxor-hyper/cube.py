@@ -7,7 +7,6 @@ import csv
 import copy
 from queue import Queue
 from threading import Thread
-from tensorflow.python.estimator import estimator
 import dual_net
 from deepxor import solved, len_solved, num_actions, apply_action, reward, DeepxorModel
 from tensorflow.python import keras
