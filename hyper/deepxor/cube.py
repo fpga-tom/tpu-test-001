@@ -11,7 +11,7 @@ import deepxor.dual_net
 from deepxor.deepxor import solved, len_solved, num_actions, apply_action, reward, DeepxorModel
 from tensorflow.python import keras
 from deepxor.hyper_net import Network
-import deepxor.selfplay
+from deepxor.selfplay import play
 import json
 
 tf.flags.DEFINE_string("model_dir", default=None, help="Estimator model dir")
@@ -225,7 +225,7 @@ def main(argv):
                     break
             current_step += 1
             if not mon_sess.should_stop() and next_selfplay == current_step:
-                hd = selfplay.play(network)
+                hd = play(network)
                 summary = mon_sess.run([merged_summary_op], feed_dict={hamming_distance: hd})
                 summary_writer.add_summary(summary[0])
                 summary_writer.flush()
