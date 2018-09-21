@@ -12,6 +12,7 @@ from deepxor.deepxor import solved, len_solved, num_actions, apply_action, rewar
 from tensorflow.python import keras
 from deepxor.hyper_net import Network
 import deepxor.selfplay
+import json
 
 tf.flags.DEFINE_string("model_dir", default=None, help="Estimator model dir")
 tf.flags.DEFINE_integer("batch_size", default=8, help="Batch size")
