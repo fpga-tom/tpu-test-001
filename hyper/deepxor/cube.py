@@ -177,8 +177,15 @@ def main(argv):
     tf.summary.scalar('hamming_distance', hamming_distance)
     merged_summary_op = tf.summary.merge_all()
 
+    output_dir = os.path.join(
+        FLAGS.model_dir,
+        json.loads(
+            os.environ.get('TF_CONFIG', '{}')
+        ).get('task', {}).get('trial', '')
+    )
+
     with tf.train.MonitoredTrainingSession(config=config,
-                               checkpoint_dir=FLAGS.model_dir,
+                               checkpoint_dir=output_dir,
                                save_checkpoint_secs=None,
                                save_checkpoint_steps=FLAGS.checkpoint_steps,
                                hooks=hooks) as mon_sess:
