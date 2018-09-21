@@ -134,7 +134,8 @@ def main(argv):
     filename_predict = tf.placeholder(tf.string, shape=[])
     filename_training = tf.placeholder(tf.string, shape=[])
     tensor_eval = tf.placeholder(tf.float32, shape=[len_solved])
-    eval_path = os.path.join(FLAGS.job_dir, 'hamming_distance')
+    trial = json.loads(os.environ.get('TF_CONFIG', '{}')).get('task', {}).get('trial', '')
+    eval_path = os.path.join(FLAGS.job_dir, trial, 'hamming_distance')
     hamming_distance = tf.placeholder(tf.int64, shape=[])
 
     predict_dataset = predict_input_fn(filename_predict)
@@ -175,8 +176,8 @@ def main(argv):
     current_step = 0
     next_selfplay = FLAGS.eval_steps
 
-    tf.summary.scalar('hamming_distance', hamming_distance)
-    merged_summary_op = tf.summary.merge_all()
+#    summary_hamming_distance = tf.summary.scalar('hamming_distance', hamming_distance)
+#    merged_summary_op = tf.summary.merge([summary_hamming_distance])
 
     output_dir = os.path.join(
         FLAGS.model_dir,
@@ -184,21 +185,22 @@ def main(argv):
             os.environ.get('TF_CONFIG', '{}')
         ).get('task', {}).get('trial', '')
     )
+    hd = len_solved
 
+    summary_writer = tf.summary.FileWriter(eval_path)
     with tf.train.MonitoredTrainingSession(config=config,
                                checkpoint_dir=output_dir,
                                save_checkpoint_secs=None,
                                save_checkpoint_steps=FLAGS.checkpoint_steps,
                                hooks=hooks) as mon_sess:
 
-        summary_writer = tf.summary.FileWriter(eval_path, graph=tf.get_default_graph())
 
         network = Network(mon_sess, policy_output, value_output, tensor_eval, eval_init_op)
         while not mon_sess.should_stop():
             tf.logging.info('Loading predict ...')
             fname = generator.get_sample_file()
             if not mon_sess.should_stop():
-                mon_sess.run(predict_init_op, feed_dict={filename_predict: fname, hamming_distance: 0})
+                mon_sess.run(predict_init_op, feed_dict={filename_predict: fname})
 
             tf.logging.info('Predicting ...')
             while not mon_sess.should_stop():
@@ -216,20 +218,21 @@ def main(argv):
             train_samples.clear()
 
             if not mon_sess.should_stop():
-                mon_sess.run(training_init_op, feed_dict={filename_training: tname, hamming_distance: 0})
+                mon_sess.run(training_init_op, feed_dict={filename_training: tname})
             tf.logging.info('Training ...')
             while not mon_sess.should_stop():
                 try:
-                    mon_sess.run(train_op, feed_dict={hamming_distance: 0})
+                    mon_sess.run(train_op)
                 except tf.errors.OutOfRangeError:
                     break
-            current_step += 1
             if not mon_sess.should_stop() and next_selfplay == current_step:
                 hd = play(network)
-                summary = mon_sess.run([merged_summary_op], feed_dict={hamming_distance: hd})
-                summary_writer.add_summary(summary[0])
+                summary = tf.Summary(value=[ tf.Summary.Value(tag="hamming_distance", simple_value=hd), ])
+#                summary = mon_sess.run(merged_summary_op, feed_dict={hamming_distance: hd})
+                summary_writer.add_summary(summary)
                 summary_writer.flush()
                 next_selfplay = current_step + FLAGS.eval_steps
+            current_step += 1
 
         summary_writer.close()
 
