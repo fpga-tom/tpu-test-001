@@ -230,7 +230,7 @@ def main(argv):
                 hd = play(network)
                 summary = tf.Summary(value=[ tf.Summary.Value(tag="hamming_distance", simple_value=hd), ])
 #                summary = mon_sess.run(merged_summary_op, feed_dict={hamming_distance: hd})
-                summary_writer.add_summary(summary)
+                summary_writer.add_summary(summary, global_step)
                 summary_writer.flush()
                 next_selfplay = current_step + FLAGS.eval_steps
             current_step += 1
