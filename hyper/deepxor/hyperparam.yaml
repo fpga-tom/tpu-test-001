@@ -2,7 +2,7 @@ trainingInput:
   scaleTier: basic_gpu
   hyperparameters:
     maxTrials: 15
-    maxParallelTrials: 3
+    maxParallelTrials: 5
     enableTrialEarlyStopping: True
     goal: MINIMIZE    
     hyperparameterMetricTag: hamming_distance
@@ -27,7 +27,6 @@ trainingInput:
       discreteValues:
       - 8
       - 16
-      - 32
     - parameterName: train_steps_per_eval
       type: DISCRETE
       discreteValues:
