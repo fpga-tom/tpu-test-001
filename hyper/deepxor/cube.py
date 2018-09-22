@@ -90,10 +90,11 @@ def write_samples(fname, generator):
 
     
 class AdiGenerator():
-    def __init__(self):
+    def __init__(self, trial):
+        self.trial = trial
         self.input_queue = Queue(maxsize=3)
         self.output_queue = Queue(maxsize=3)
-        for f in [ FLAGS.data_file + '-' + str(i) for i in range(0,3)]:
+        for f in [ FLAGS.data_file + '-' + str(i) + '-' + str(trial) for i in range(0,3)]:
             self.input_queue.put(f)
         self.generator_thread = Thread(target=self.generate_from_queue, daemon=True)
         self.generator_thread.start()
@@ -125,16 +126,16 @@ def main(argv):
     config.gpu_options.per_process_gpu_memory_fraction = 0.6
     config.gpu_options.allow_growth = True
 
-    generator = AdiGenerator()
+    trial = json.loads(os.environ.get('TF_CONFIG', '{}')).get('task', {}).get('trial', '')
+    generator = AdiGenerator(trial)
     train_samples = []
-    tname = FLAGS.train_file
+    tname = FLAGS.train_file + '-' + str(trial)
     local_model = DeepxorModel('worker')
 
 
     filename_predict = tf.placeholder(tf.string, shape=[])
     filename_training = tf.placeholder(tf.string, shape=[])
     tensor_eval = tf.placeholder(tf.float32, shape=[len_solved])
-    trial = json.loads(os.environ.get('TF_CONFIG', '{}')).get('task', {}).get('trial', '')
     eval_path = os.path.join(FLAGS.model_dir, trial, 'hamming_distance')
     hamming_distance = tf.placeholder(tf.int64, shape=[])
 
@@ -223,17 +224,15 @@ def main(argv):
             tf.logging.info('Training ...')
             while not mon_sess.should_stop():
                 try:
-                    mon_sess.run(train_op)
+                    _, current_step = mon_sess.run([train_op, global_step])
                 except tf.errors.OutOfRangeError:
                     break
-            if not mon_sess.should_stop() and next_selfplay == current_step:
+            if not mon_sess.should_stop() and next_selfplay < current_step:
                 hd = play(network)
                 summary = tf.Summary(value=[ tf.Summary.Value(tag="hamming_distance", simple_value=hd), ])
-#                summary = mon_sess.run(merged_summary_op, feed_dict={hamming_distance: hd})
                 summary_writer.add_summary(summary, current_step)
                 summary_writer.flush()
                 next_selfplay = current_step + FLAGS.eval_steps
-            current_step += 1
 
         summary_writer.close()
 
