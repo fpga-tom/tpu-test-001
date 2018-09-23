@@ -50,10 +50,10 @@ def _parse_function(example_proto):
                           'distance': tf.FixedLenFeature((1), tf.float32),
                           }
      parsed_features = tf.parse_single_example(example_proto, keys_to_features)
-     return {'state': parsed_features['state'], 'distance': parsed_features['distance']}, {'policy_output': parsed_features['policy_output'], 'value_output': parsed_features['value_output'], 'parent': parsed_features['parent'], 'reward': parsed_features['reward']}
+     return {'state': parsed_features['state'], 'distance': parsed_features['distance'][0]}, {'policy_output': parsed_features['policy_output'], 'value_output': parsed_features['value_output'], 'parent': parsed_features['parent'], 'reward': parsed_features['reward']}
 
 def _tensor_map(tensor):
-     return {'state': tensor, 'distance': tf.constant([0.])}, {'policy_output': tf.constant(np.zeros([num_actions], dtype='float32')), 'value_output': tf.constant([0.]) , 'parent': tf.constant(np.zeros([len_solved],dtype='float32')), 'reward': tf.constant([0.])}
+     return {'state': tensor, 'distance': tf.constant(0.)}, {'policy_output': tf.constant(np.zeros([num_actions], dtype='float32')), 'value_output': tf.constant([0.]) , 'parent': tf.constant(np.zeros([len_solved],dtype='float32')), 'reward': tf.constant([0.])}
 
 def predict_input_fn(fname):
     ds = tf.data.TFRecordDataset(fname)
@@ -112,11 +112,8 @@ class AdiGenerator():
         self.input_queue.put(fname)
 
 def compute_loss(policy_output, value_output, logits, features, labels):
-    value_loss = FLAGS.value_weight*tf.reduce_mean(tf.losses.mean_squared_error(tf.reshape(labels['value_output'], [-1,1]),
-        predictions=value_output) / features['distance'])
-    policy_loss = tf.reduce_mean(
-        tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.stop_gradient(labels['policy_output']),
-            logits=logits) / features['distance'])
+    value_loss = FLAGS.value_weight*tf.losses.mean_squared_error(labels['value_output'], predictions=value_output)#, weights=features['distance'])
+    policy_loss = tf.losses.softmax_cross_entropy(onehot_labels=tf.stop_gradient(labels['policy_output']), logits=logits, weights=features['distance'])
     loss = value_loss + policy_loss + tf.losses.get_regularization_loss()
     return loss
 
