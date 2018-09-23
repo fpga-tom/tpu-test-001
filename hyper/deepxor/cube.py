@@ -8,7 +8,7 @@ import copy
 from queue import Queue
 from threading import Thread
 import deepxor.dual_net
-from deepxor.deepxor import solved, len_solved, num_actions, apply_action, reward, DeepxorModel
+from deepxor.deepxor import solved, len_solved, num_actions, apply_action, reward, DeepxorModel, validation
 from tensorflow.python import keras
 from deepxor.hyper_net import Network
 from deepxor.selfplay import play
@@ -228,7 +228,9 @@ def main(argv):
                 except tf.errors.OutOfRangeError:
                     break
             if not mon_sess.should_stop() and next_selfplay < current_step:
-                hd = play(network)
+                hd = 0
+                for state in validation:
+                    hd += play(network, state)
                 summary = tf.Summary(value=[ tf.Summary.Value(tag="hamming_distance", simple_value=hd), ])
                 summary_writer.add_summary(summary, current_step)
                 summary_writer.flush()

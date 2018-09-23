@@ -15,6 +15,11 @@ solved = [1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0
 len_solved = len(solved)
 num_actions = len_solved
 
+validation = [
+        [0 for x in range(0, len_solved)],
+        [1 for x in range(0, len_solved)],
+        ]
+
 def apply_action(state, action):
     state = [i for i in state]
     if action < len(solved):
@@ -30,9 +35,9 @@ def state_diff(state):
     return sum([1 for _solved, _state in zip(solved, state) if _solved != _state])
 
 class Position():
-    def __init__(self, n=0):
+    def __init__(self, n=0, state=None):
         self.n = n
-        self.state = [0 for x in range(0, len_solved)]
+        self.state = [0 for x in range(0, len_solved)] if state is None else state
         self.to_play = 1
 
     def play_move(self, c):

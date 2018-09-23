@@ -1,7 +1,7 @@
 import tensorflow as tf
 from deepxor.strategies import MCTSPlayer
 import deepxor.dual_net
-from deepxor.deepxor import state_diff
+from deepxor.deepxor import state_diff, Position
 import time
 
 #tf.flags.DEFINE_string("model_dir", default=None, help="Estimator model dir")
@@ -11,10 +11,10 @@ FLAGS = tf.flags.FLAGS
 import sys
 sys.setrecursionlimit(5000)
 
-def play(network):
+def play(network, state=None):
     readouts = FLAGS.num_readouts
     player = MCTSPlayer(network)
-    player.initialize_game()
+    player.initialize_game(Position(state=state))
 
     first_node = player.root.select_leaf()
     prob, val = network.predict(first_node.position.state)
