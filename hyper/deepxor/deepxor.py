@@ -5,7 +5,12 @@ import tensorflow as tf
 from tensorflow.python import keras
 from tensorflow.python.keras import layers
 
-tf.flags.DEFINE_float("l2", default=1e-4, help="momentum")
+tf.flags.DEFINE_float("l2", default=1e-4, help="l2 regularization")
+tf.flags.DEFINE_integer("input_layer", default=4096, help="input layer size")
+tf.flags.DEFINE_integer("hidden_layer", default=2048, help="hidden layer size")
+tf.flags.DEFINE_integer("policy_layer", default=512, help="policy layer size")
+tf.flags.DEFINE_integer("value_layer", default=512, help="value layer size")
+
 
 FLAGS = tf.flags.FLAGS
 
@@ -59,10 +64,10 @@ class DeepxorModel(keras.Model):
     def __init__(self, scope):
         self.scope = scope
         super(DeepxorModel, self).__init__()
-        self.l_0 = layers.Dense(4096, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2), kernel_initializer=tf.contrib.layers.xavier_initializer())
-        self.l_1 = layers.Dense(2048, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2), kernel_initializer=tf.contrib.layers.xavier_initializer())
-        self.l_2 = layers.Dense(512, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2), kernel_initializer=tf.contrib.layers.xavier_initializer())
-        self.l_3 = layers.Dense(512, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2), kernel_initializer=tf.contrib.layers.xavier_initializer())
+        self.l_0 = layers.Dense(FLAGS.input_layer, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2), kernel_initializer=tf.contrib.layers.xavier_initializer())
+        self.l_1 = layers.Dense(FLAGS.hidden_layer, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2), kernel_initializer=tf.contrib.layers.xavier_initializer())
+        self.l_2 = layers.Dense(FLAGS.policy_layer, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2), kernel_initializer=tf.contrib.layers.xavier_initializer())
+        self.l_3 = layers.Dense(FLAGS.value_layer, activation=tf.nn.elu, kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2), kernel_initializer=tf.contrib.layers.xavier_initializer())
         self.logits = layers.Dense(num_actions,kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2), kernel_initializer=tf.contrib.layers.xavier_initializer())
         self.policy = layers.Softmax()
         self.values = layers.Dense(1, activation=tf.tanh,kernel_regularizer= tf.contrib.layers.l2_regularizer(scale=FLAGS.l2), kernel_initializer=tf.contrib.layers.xavier_initializer())
