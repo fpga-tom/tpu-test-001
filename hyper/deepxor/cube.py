@@ -112,7 +112,7 @@ class AdiGenerator():
         self.input_queue.put(fname)
 
 def compute_loss(policy_output, value_output, logits, features, labels):
-    value_loss = FLAGS.value_weight*tf.losses.mean_squared_error(labels['value_output'], predictions=value_output)#, weights=features['distance'])
+    value_loss = FLAGS.value_weight*tf.losses.mean_squared_error(labels['value_output'], predictions=value_output, weights=tf.reshape(features['distance'], [-1,1]))
     policy_loss = tf.losses.softmax_cross_entropy(onehot_labels=tf.stop_gradient(labels['policy_output']), logits=logits, weights=features['distance'])
     loss = value_loss + policy_loss + tf.losses.get_regularization_loss()
     return loss
