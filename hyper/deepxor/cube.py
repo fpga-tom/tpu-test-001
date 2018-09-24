@@ -155,9 +155,9 @@ def main(argv):
     x_num_actions = FLAGS.rolls_len
 
     arg = tf.reshape((labels['reward'] + value_output)/2., [x_num_actions, num_actions])
-    parent = tf.reshape(labels['parent'], [x_num_actions, num_actions, len_solved])[:,0,:]
-    distance = tf.reshape(features['distance'], [x_num_actions, num_actions])[:,0]
-    reward = tf.reshape(labels['reward'], [x_num_actions, num_actions])[:,0]
+    parent = labels['parent'][0::num_actions]
+    distance = features['distance'][0::num_actions]
+    reward = labels['reward'][0::num_actions]
     value = tf.reduce_max(arg, 1)
     policy = tf.one_hot(tf.argmax(arg, 1), num_actions, 1.0, 0.0)
 
