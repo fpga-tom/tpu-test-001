@@ -1,0 +1,35 @@
+trainingInput:
+  scaleTier: basic_gpu
+  hyperparameters:
+    maxTrials: 15
+    maxParallelTrials: 5
+    enableTrialEarlyStopping: True
+    goal: MINIMIZE    
+    hyperparameterMetricTag: hamming_distance
+    params:
+    - parameterName: l2
+      type: DOUBLE
+      minValue: 0.0001
+      maxValue: 0.1
+      scaleType: UNIT_LINEAR_SCALE
+    - parameterName: learning_rate
+      type: DOUBLE
+      minValue: 0.0001
+      maxValue: 0.1
+      scaleType: UNIT_LINEAR_SCALE
+    - parameterName: value_weight
+      type: DOUBLE
+      minValue: 0.01
+      maxValue: 0.3
+      scaleType: UNIT_LINEAR_SCALE
+    - parameterName: batch_size
+      type: DISCRETE
+      discreteValues:
+      - 8
+      - 16
+    - parameterName: train_steps_per_eval
+      type: DISCRETE
+      discreteValues:
+      - 2
+      - 4
+      - 6
