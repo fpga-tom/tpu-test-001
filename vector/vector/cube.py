@@ -8,7 +8,7 @@ import copy
 from queue import Queue
 from threading import Thread
 import vector.dual_net
-from vector.deepxor import solved, len_solved, num_actions, apply_action_reverse, reward, DeepxorModel, validation
+from vector.deepxor import solved, len_solved, num_actions, apply_action, apply_action_reverse, reward, DeepxorModel, validation
 from tensorflow.python import keras
 from vector.hyper_net import Network
 from vector.selfplay import play
@@ -38,7 +38,7 @@ def _generate():
         for i in range(0,FLAGS.rolls_len):
             current = apply_action_reverse(current, random.randint(0,num_actions-1))
             for a in range(0, num_actions):
-                state = apply_action_reverse(current, a)
+                state = apply_action(current, a)
                 yield state, np.zeros([num_actions]), 0, current, reward(state), i + 1
 
 def _parse_function(example_proto):
