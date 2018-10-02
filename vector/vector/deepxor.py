@@ -56,7 +56,7 @@ def reward(state):
     return -1
 
 def state_diff(state):
-    return np.linalg.norm([(_solved - _state) for _solved, _state in zip(solved, state)])
+    return np.linalg.norm([_solved - _state for _solved, _state in zip(solved, state)])
 
 class Position():
     def __init__(self, n=0, state=None):

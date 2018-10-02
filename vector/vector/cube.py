@@ -227,7 +227,7 @@ def main(argv):
                 except tf.errors.OutOfRangeError:
                     break
             if not mon_sess.should_stop() and next_selfplay < current_step:
-                hd = 0
+                hd = 0.
                 for state in validation:
                     hd += play(network, state)
                 summary = tf.Summary(value=[ tf.Summary.Value(tag="hamming_distance", simple_value=hd), ])

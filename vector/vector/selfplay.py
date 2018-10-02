@@ -35,14 +35,14 @@ def play(network, state=None):
         move = player.pick_move()
         if move == lastmove:
             tf.logging.info('lastmove == move')
-            return state_diff(player.root.position.state)
+#            return state_diff(player.root.position.state)
         before = state_diff(player.root.position.state)
         player.play_move(move)
         after = state_diff(player.root.position.state)
         if after > before:
             tf.logging.info('move increasing distance')
             return after
-        tf.logging.info('playing move: %d hamming distance: %d' % (move, state_diff(player.root.position.state)))
+        tf.logging.info('playing move: %d euclidean distance: %f' % (move, state_diff(player.root.position.state)))
         if player.root.is_done():
             tf.logging.info('done')
             return 0
