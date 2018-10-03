@@ -42,7 +42,7 @@ def play(network, state=None):
         if after > before:
             tf.logging.info('move increasing distance')
             return after
-        if after == 0:
+        if after < 0.1:
             tf.logging.info('done')
             return after
         tf.logging.info('playing move: %d euclidean distance: %f' % (move, state_diff(player.root.position.state)))
