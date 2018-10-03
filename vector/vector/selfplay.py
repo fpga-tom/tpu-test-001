@@ -23,7 +23,7 @@ def play(network, state=None):
 
     lastmove = -1
 #    hamm_dist = state_diff(player.root.position.state)
-    hamm_dist = 10
+    hamm_dist = 25
 
     for lo in range(0, hamm_dist):
 #        player.root.inject_noise()
