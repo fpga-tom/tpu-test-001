@@ -1,0 +1,27 @@
+<lines> ::= <line>|<lines><line>
+<line> ::= <number> <statement>"\n"
+<statement> ::= PRINT <expr_list>|
+		IF <expression> <relop> <expression> THEN <statement>|
+		GOTO <expression>|
+		INPUT <var_list>|
+		LET <var> = <expression>|
+		GOSUB <expression>|
+		RETURN|
+		CLEAR|
+		LIST|
+		RUN|
+		END
+<expr_list> ::= <string_expr>|<expr_list>,<string_expr>
+<string_expr> ::= '<string>'|<expression>
+<var_list> ::= <var>|<var_list>,<var>
+<expression_atom> ::= + <term>|- <term>
+<expression> ::= <expression_atom>|<expression_atom> <expression>
+<term> ::= <factor>|<term> <factor_atom>
+<factor_atom> ::= * <factor>|/ <factor>
+<factor> ::= <var>|<number>|(<expression>)
+<var> ::= A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|X|Y|Z
+<number> ::= <digit>|<number><digit>
+<digit> ::= 0|1|2|3|4|5|6|7|8|9
+<relop> ::= <|>|=|<=|>=|=
+<string_list> ::= a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|x|y|z
+<string> ::= <string_list>|<string_list><string>
