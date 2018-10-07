@@ -16,9 +16,11 @@ tf.flags.DEFINE_integer("value_layer", default=512, help="value layer size")
 
 FLAGS = tf.flags.FLAGS
 
+# maximum number of syntax tree nodes
+num_tree_nodes = 28
 num_productions = 27
-num_choices = 25
-solved = np.zeros([num_productions*num_choices])
+#num_choices = 25
+solved = np.zeros([num_tree_nodes*num_productions])
 action_list = [
         [1,0,0],
         [0,1,0],
@@ -38,7 +40,7 @@ action_list = [
         [4,4,4]
         ]
 len_solved = len(solved)
-num_actions = num_productions*num_choices
+num_actions = num_tree_nodes*num_productions
 
 validation = [
         [0 for x in range(0, len_solved)],
@@ -64,7 +66,7 @@ def state_diff(state):
 class Position():
     def __init__(self, n=0, state=None):
         self.n = n
-        self.state = np.zeros([num_productions*num_choices]) if state is None else state
+        self.state = np.zeros([num_tree_nodes*num_productions]) if state is None else state
         self.to_play = 1
 
     def play_move(self, c):

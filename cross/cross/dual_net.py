@@ -1,5 +1,5 @@
 import tensorflow as tf
-from cross.deepxor import num_actions, len_solved, DeepxorModel, num_productions, num_choices
+from cross.deepxor import num_actions, len_solved, DeepxorModel, num_tree_nodes, num_productions
 from queue import Queue
 from threading import Thread
 
@@ -92,8 +92,8 @@ class Network():
 
     def queued_predict_input_fn(self, params):
         dataset = tf.data.Dataset.from_generator(self.generate_from_queue,
-                (tf.float32), (tf.TensorShape([num_productions*num_choices])))
-        dataset = dataset.map(lambda x : tf.reshape(x, [1, num_productions*num_choices]))
+                (tf.float32), (tf.TensorShape([num_tree_nodes*num_productions])))
+        dataset = dataset.map(lambda x : tf.reshape(x, [1, num_tree_nodes*num_productions]))
         return dataset
 
 
