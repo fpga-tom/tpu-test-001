@@ -1,5 +1,6 @@
 import tensorflow as tf
 from cross.deepxor import num_actions, len_solved, DeepxorModel, num_tree_nodes, num_productions
+from cross.utilities import ModelFactory
 from queue import Queue
 from threading import Thread
 
@@ -21,7 +22,7 @@ def create(input_layer, num_actions):
     return policy_output, value_output, logits
 
 def model_fn(features, labels, mode, params):
-    local_model = DeepxorModel('play')
+    local_model = ModelFactory.factory().create()
     policy_output, value_output, logits = local_model(features)
 
     if mode == tf.estimator.ModeKeys.PREDICT:
@@ -92,8 +93,8 @@ class Network():
 
     def queued_predict_input_fn(self, params):
         dataset = tf.data.Dataset.from_generator(self.generate_from_queue,
-                (tf.float32), (tf.TensorShape([num_tree_nodes*num_productions])))
-        dataset = dataset.map(lambda x : tf.reshape(x, [1, num_tree_nodes*num_productions]))
+                (tf.float32), (tf.TensorShape([FLAGS.seq_max_len*num_tree_nodes*num_productions])))
+        dataset = dataset.map(lambda x : tf.reshape(x, [1, FLAGS.seq_max_len*num_tree_nodes*num_productions]))
         return dataset
 
 

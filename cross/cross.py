@@ -4,15 +4,18 @@ from representation.derivation import generate_tree
 from algorithm.parameters import params
 from representation.individual import Individual
 from representation.position import PonyGEPositionFactory
-from cross.utilities import PositionFactory
+from representation.recurrent import RecurrentModelFactory
+from cross.utilities import PositionFactory, ModelFactory
 from cross.selfplay import play_init, play_select_move
 from cross.dual_net import Network
+from cross.deepxor import num_actions
 
 import tensorflow as tf
 
 method="random"
 max_depth=40
 PositionFactory.set_factory('pony', PonyGEPositionFactory(method=method,max_depth=max_depth))
+ModelFactory.set_factory('recurrent', RecurrentModelFactory(num_actions))
 
 grm = Grammar('./tbasic.bnf')
 params['BNF_GRAMMAR'] = grm

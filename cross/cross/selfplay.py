@@ -21,7 +21,7 @@ def play_init(network, state=None, tree=None):
     global g_player
     g_network = network
     player = MCTSPlayer(network)
-    player.initialize_game(PositionFactory.factory().create(state=state, tree=tree))
+    player.initialize_game(PositionFactory.factory().create(state=state, trees=[tree]))
     g_player = player
 
     first_node = player.root.select_leaf()
@@ -40,7 +40,6 @@ def play_select_move():
         g_player.tree_search()
     move = g_player.pick_move()
     print("".join(g_player.root.position._output))
-    print(g_player.root.position.tree)
     g_player.play_move(move)
 
 

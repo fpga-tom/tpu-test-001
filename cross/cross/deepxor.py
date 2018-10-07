@@ -12,6 +12,7 @@ tf.flags.DEFINE_integer("input_layer", default=4096, help="input layer size")
 tf.flags.DEFINE_integer("hidden_layer", default=2048, help="hidden layer size")
 tf.flags.DEFINE_integer("policy_layer", default=512, help="policy layer size")
 tf.flags.DEFINE_integer("value_layer", default=512, help="value layer size")
+tf.flags.DEFINE_integer("seq_max_len", default=20, help="maximum state len")
 
 
 FLAGS = tf.flags.FLAGS
@@ -20,34 +21,17 @@ FLAGS = tf.flags.FLAGS
 num_tree_nodes = 28
 num_productions = 27
 #num_choices = 25
-solved = np.zeros([num_tree_nodes*num_productions])
-action_list = [
-        [1,0,0],
-        [0,1,0],
-        [0,0,1],
-        [1,1,1],
-        [2,0,0],
-        [0,2,0],
-        [0,0,2],
-        [2,2,2],
-        [3,0,0],
-        [0,3,0],
-        [0,0,3],
-        [3,3,3],
-        [4,0,0],
-        [0,4,0],
-        [0,0,4],
-        [4,4,4]
-        ]
+solved = np.zeros([FLAGS.seq_max_len*num_tree_nodes*num_productions])
+action_list = [ ]
 len_solved = len(solved)
-num_actions = num_tree_nodes*num_productions
+num_actions = num_productions
 
 validation = [
         [0 for x in range(0, len_solved)],
         ]
 
 def apply_action(state, action):
-    state = [x for x in state]
+    state = np.array([x for x in state])
     state[action] = 1.0
     return state
 
@@ -66,7 +50,7 @@ def state_diff(state):
 class Position():
     def __init__(self, n=0, state=None):
         self.n = n
-        self.state = np.zeros([num_tree_nodes*num_productions]) if state is None else state
+        self.state = np.zeros([FLAGS.seq_max_len*num_tree_nodes*num_productions]) if state is None else state
         self.to_play = 1
 
     def play_move(self, c):
