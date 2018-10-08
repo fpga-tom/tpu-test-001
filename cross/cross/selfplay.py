@@ -39,7 +39,12 @@ def play_select_move():
     while g_player.root.N < current_readouts + readouts and time.time() - start < FLAGS.time_per_move:
         g_player.tree_search()
     move = g_player.pick_move()
-    print("".join(g_player.root.position._output))
+    if g_player.root.position._output is not None:
+        print("".join(g_player.root.position._output))
+        r = g_player.root.position.current
+        while r is not None and r.parent is not None:
+            r = r.parent
+        print(r)
     g_player.play_move(move)
 
 

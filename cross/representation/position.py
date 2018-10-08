@@ -72,12 +72,12 @@ class PonyGEPosition(cross.deepxor.Position):
     def play_move(self, c):
 
         pos = copy.deepcopy(self)
-        if self.current == None:
-            pos.trees = []
-            pos.current = self.trees.pop(c)
+        pos.current = None
+        if self.current is None:
+            pos.current = copy.deepcopy(self.trees[c])
         else:
-
-            productions = params['BNF_GRAMMAR'].rules[self.current]
+            tree = self.current
+            productions = params['BNF_GRAMMAR'].rules[self.current.root]
             chosen_prod = productions['choices'][c]
             tree.children = []
 
@@ -106,8 +106,8 @@ class PonyGEPosition(cross.deepxor.Position):
 
     def all_legal_moves(self):
         available_indices = np.zeros([num_actions])
-        if self.current == None:
-            for i, tree enumerate(self.trees):
+        if self.current is None:
+            for i, tree in enumerate(self.trees):
                 available_indices[i] = 1.0
         else:
             if self.current.root in params['BNF_GRAMMAR'].rules:
