@@ -67,14 +67,17 @@ class PonyGEPosition(cross.deepxor.Position):
         self.max_depth = 0
         self.depth = 0
         self.depth_limit = 90
-        self.kind = "NT"
+        self.current = None
 
     def play_move(self, c):
 
         pos = copy.deepcopy(self)
-        pos.trees = []
-        for tree in self.trees:
-            productions = params['BNF_GRAMMAR'].rules[tree.root]
+        if self.current == None:
+            pos.trees = []
+            pos.current = self.trees.pop(c)
+        else:
+
+            productions = params['BNF_GRAMMAR'].rules[self.current]
             chosen_prod = productions['choices'][c]
             tree.children = []
 
@@ -95,18 +98,22 @@ class PonyGEPosition(cross.deepxor.Position):
                     idx = [k for k, v in params['BNF_GRAMMAR'].rules.items()].index(symbol["symbol"])
                     pos.state = apply_action(pos.state, pos.n * num_tree_nodes * num_productions + pos.n * num_productions + idx)
 
+            self._output = self.output
+
         pos.n += 1
-        self._output = self.output
         return pos
 
 
     def all_legal_moves(self):
         available_indices = np.zeros([num_actions])
-        for tree in self.trees:
-            if tree.root in params['BNF_GRAMMAR'].rules:
-                productions = params['BNF_GRAMMAR'].rules[tree.root]
+        if self.current == None:
+            for i, tree enumerate(self.trees):
+                available_indices[i] = 1.0
+        else:
+            if self.current.root in params['BNF_GRAMMAR'].rules:
+                productions = params['BNF_GRAMMAR'].rules[self.current.root]
                 remaining_depth = self.max_depth - self.n
-                available = legal_productions(self.method, remaining_depth, tree.root,
+                available = legal_productions(self.method, remaining_depth, self.current.root,
                                               productions['choices'])
                 for chosen_prod in available:
                     idx = productions['choices'].index(chosen_prod) 
