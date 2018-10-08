@@ -44,7 +44,7 @@ def generate_tree(tree, genome, output, method, nodes, depth, max_depth,
     
     # Randomly pick a production choice.
     #chosen_prod = choice(available)
-    chosen_prod = productions['choices'][selected_production]
+    chosen_prod = productions['choices'][int(selected_production[0])]
 
     # Find the index of the chosen production and set a matching codon based
     # on that index.
@@ -74,9 +74,9 @@ def generate_tree(tree, genome, output, method, nodes, depth, max_depth,
             tree.children.append(Tree(symbol["symbol"], tree))
             
             # recurse on the new node.
-#            genome, output, nodes, d, max_depth = \
-#                generate_tree(tree.children[-1], genome, output, method,
-#                              nodes, depth, max_depth, depth_limit)
+            genome, output, nodes, d, max_depth = \
+                generate_tree(tree.children[-1], genome, output, method,
+                        nodes, depth, max_depth, depth_limit, selected_production[1:])
 
     NT_kids = [kid for kid in tree.children if kid.root in
                params['BNF_GRAMMAR'].non_terminals]

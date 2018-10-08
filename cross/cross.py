@@ -1,3 +1,6 @@
+import tensorflow as tf
+
+tf.flags.DEFINE_string("grammar", default="./tbasic.bnf", help="grammar")
 from representation.grammar import Grammar
 from representation.tree import Tree
 from representation.derivation import generate_tree
@@ -10,14 +13,14 @@ from cross.selfplay import play_init, play_select_move
 from cross.dual_net import Network
 from cross.deepxor import num_actions
 
-import tensorflow as tf
+FLAGS = tf.flags.FLAGS
 
 method="random"
 max_depth=100
 PositionFactory.set_factory('pony', PonyGEPositionFactory(method=method,max_depth=max_depth))
 ModelFactory.set_factory('recurrent', RecurrentModelFactory(num_actions))
 
-grm = Grammar('./tbasic.bnf')
+grm = Grammar(FLAGS.grammar)
 params['BNF_GRAMMAR'] = grm
 ind_tree = Tree(str(grm.start_rule["symbol"]), None)
 play_init(Network(), tree=ind_tree)

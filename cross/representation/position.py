@@ -25,8 +25,8 @@ class PonyGEPositionBuilder(Builder):
     def __init__(self, n, state):
         self.position = PonyGEPosition(n, state)
 
-    def set_trees(self, trees):
-        self.position.trees = trees
+    def set_tree(self, tree):
+        self.position.current = tree
         return self
 
     def set_method(self, method):
@@ -42,82 +42,89 @@ class PonyGEPositionBuilder(Builder):
 
 class PonyGEPositionBuilderDirector:
     @staticmethod
-    def construct(n, state, trees=None, method=None, max_depth=0):
-        return PonyGEPositionBuilder(n, state).set_trees(trees).set_method(method).set_max_depth(max_depth).get_result()
+    def construct(n, state, tree=None, method=None, max_depth=0):
+        return PonyGEPositionBuilder(n, state).set_tree(tree).set_method(method).set_max_depth(max_depth).get_result()
 
 class PonyGEPositionFactory(PositionFactory):
     def __init__(self, method, max_depth):
         self.method = method
         self.max_depth = max_depth
 
-    def create(self, n=0, state=None, trees=None):
-        return PonyGEPositionBuilderDirector.construct(n, state, trees=trees, method=self.method, max_depth=self.max_depth)
+    def create(self, n=0, state=None, tree=None):
+        return PonyGEPositionBuilderDirector.construct(n, state, tree=tree, method=self.method, max_depth=self.max_depth)
 
 class PonyGEPosition(cross.deepxor.Position):
 
     def __init__(self, n=0, state=None, trees=None, method=None):
         super(PonyGEPosition, self).__init__(n=n, state=state)
-        self.trees = trees if trees is not None else []
         self.method = method
         self.max_depth = None
         self.genome = []
         self.output = []
         self._output = None
         self.nodes = 0
-        self.max_depth = 0
+        self.max_depth = 10
         self.depth = 0
         self.depth_limit = 90
         self.current = None
+        self.num_nodes = 0
+
+    def _generate_tree(self, pos, tree, output, selected_production, undecided_trees):
+        productions = params['BNF_GRAMMAR'].rules[tree.root]
+        if selected_production == -1:
+            if  len(productions['choices']) == 1:
+                selected_production = 0
+            else:
+                undecided_trees.append(tree)
+                return output, undecided_trees
+
+        chosen_prod = productions['choices'][selected_production]
+        tree.children = []
+        pos.state = apply_action(pos.state, (pos.num_nodes , selected_production))
+        pos.num_nodes += 1
+
+        for symbol in chosen_prod['choice']:
+            # Iterate over all symbols in the chosen production.
+            if symbol["type"] == "T":
+                # The symbol is a terminal. Append new node to children.
+                tree.children.append(Tree(symbol["symbol"], tree))
+                
+                # Append the terminal to the output list.
+                output.append(symbol["symbol"])
+            
+            elif symbol["type"] == "NT":
+                # The symbol is a non-terminal. Append new node to children.
+                tree.children.append(Tree(symbol["symbol"], tree))
+
+                output, undecided_trees = self._generate_tree(pos, tree.children[-1], output, -1, undecided_trees)
+
+        return output, undecided_trees
 
     def play_move(self, c):
 
         pos = copy.deepcopy(self)
-        pos.current = None
-        if self.current is None:
-            pos.current = copy.deepcopy(self.trees[c])
-        else:
-            tree = self.current
-            productions = params['BNF_GRAMMAR'].rules[self.current.root]
-            chosen_prod = productions['choices'][c]
-            tree.children = []
 
-            for symbol in chosen_prod['choice']:
-                # Iterate over all symbols in the chosen production.
-                if symbol["type"] == "T":
-                    # The symbol is a terminal. Append new node to children.
-                    tree.children.append(Tree(symbol["symbol"], tree))
-                    
-                    # Append the terminal to the output list.
-                    self.output.append(symbol["symbol"])
-                
-                elif symbol["type"] == "NT":
-                    # The symbol is a non-terminal. Append new node to children.
-                    tree.children.append(Tree(symbol["symbol"], tree))
-                    pos.trees.append(tree.children[-1])
-
-                    idx = [k for k, v in params['BNF_GRAMMAR'].rules.items()].index(symbol["symbol"])
-                    pos.state = apply_action(pos.state, (pos.n , idx))
-
-            self._output = self.output
+        if pos.current:
+            pos.output, trees = self._generate_tree(pos, pos.current, pos.output, c, [])
+            pos.current = trees.pop(0) if trees else None
 
         pos.n += 1
         return pos
 
+    def is_done(self):
+        return self.current is None
+
 
     def all_legal_moves(self):
         available_indices = np.zeros([num_actions])
-        if self.current is None:
-            for i, tree in enumerate(self.trees):
-                available_indices[i] = 1.0
-        else:
-            if self.current.root in params['BNF_GRAMMAR'].rules:
-                productions = params['BNF_GRAMMAR'].rules[self.current.root]
-                remaining_depth = self.max_depth - self.n
-                available = legal_productions(self.method, remaining_depth, self.current.root,
-                                              productions['choices'])
-                for chosen_prod in available:
-                    idx = productions['choices'].index(chosen_prod) 
-                    available_indices[idx] = 1.
+        if self.current and self.current.root in params['BNF_GRAMMAR'].rules:
+            productions = params['BNF_GRAMMAR'].rules[self.current.root]
+            remaining_depth = self.max_depth - self.n
+            available = legal_productions(self.method, remaining_depth, self.current.root,
+                                          productions['choices'])
+            for chosen_prod in available:
+                idx = productions['choices'].index(chosen_prod) 
+                available_indices[idx] = 1.
         return available_indices
 
 

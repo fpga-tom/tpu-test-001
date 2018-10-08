@@ -1,3 +1,4 @@
+import os
 import copy
 import numpy as np
 
@@ -5,7 +6,8 @@ import tensorflow as tf
 from tensorflow.python import keras
 from tensorflow.python.keras import layers
 from algorithm.parameters import params
-from representation.derivation import legal_productions
+from representation.derivation import legal_productions, generate_tree
+from representation.tree import Tree
 
 tf.flags.DEFINE_float("l2", default=1e-4, help="l2 regularization")
 tf.flags.DEFINE_integer("input_layer", default=4096, help="input layer size")
@@ -38,11 +40,45 @@ def apply_action(state, action):
 def apply_action_reverse(state, action):
     return np.cross(action_list[action], state)
 
+def _generate_tree(tree, output, selected_production):
+    if selected_production[0] == -1:
+        return output
+    productions = params['BNF_GRAMMAR'].rules[tree.root]
+
+    chosen_prod = productions['choices'][int(selected_production[0])]
+    tree.children = []
+
+    for symbol in chosen_prod['choice']:
+        # Iterate over all symbols in the chosen production.
+        if symbol["type"] == "T":
+            # The symbol is a terminal. Append new node to children.
+            tree.children.append(Tree(symbol["symbol"], tree))
+            
+            # Append the terminal to the output list.
+            output.append(symbol["symbol"])
+        
+        elif symbol["type"] == "NT":
+            # The symbol is a non-terminal. Append new node to children.
+            tree.children.append(Tree(symbol["symbol"], tree))
+
+            output = _generate_tree(tree.children[-1], output, selected_production[1:])
+
+    return output
+
 def reward(state):
-#    if all([_solved == _state for _solved, _state in zip(solved, state)]):
-#        return 1
-#    return -1
-    return np.random.choice([-1,1])
+    grm = params['BNF_GRAMMAR']
+    ind_tree = Tree(str(grm.start_rule["symbol"]), None)
+    output = _generate_tree(ind_tree, [], state)
+
+    with open('/tmp/program.bf', 'w') as out:
+        out.write("".join(output))
+
+    retval = os.system("./eval.sh")
+
+    if retval == 0:
+        return 1
+    else:
+        return -1
 
 def state_diff(state):
     return np.linalg.norm([_solved - _state for _solved, _state in zip(solved, state)])
@@ -50,7 +86,7 @@ def state_diff(state):
 class Position():
     def __init__(self, n=0, state=None):
         self.n = n
-        self.state = np.zeros([FLAGS.seq_max_len*num_tree_nodes*num_productions]) if state is None else state
+        self.state = -1*np.ones([FLAGS.seq_max_len*num_tree_nodes*num_productions]) if state is None else state
         self.to_play = 1
 
     def play_move(self, c):

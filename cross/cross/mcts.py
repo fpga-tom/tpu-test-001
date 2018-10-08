@@ -159,4 +159,4 @@ class MCTSNode(object):
                             dirichlet * FLAGS.dirichlet_noise_weight)
 
     def is_done(self):
-        return self.position.score() == 1
+        return self.position.is_done()

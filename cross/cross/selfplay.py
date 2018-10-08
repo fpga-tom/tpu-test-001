@@ -1,8 +1,10 @@
 import tensorflow as tf
 from cross.strategies import MCTSPlayer
 import cross.dual_net
-from cross.deepxor import state_diff
+from cross.deepxor import state_diff, _generate_tree
 from cross.utilities import PositionFactory
+from algorithm.parameters import params
+from representation.tree import Tree
 import time
 import numpy as np
 
@@ -21,7 +23,7 @@ def play_init(network, state=None, tree=None):
     global g_player
     g_network = network
     player = MCTSPlayer(network)
-    player.initialize_game(PositionFactory.factory().create(state=state, trees=[tree]))
+    player.initialize_game(PositionFactory.factory().create(state=state, tree=tree))
     g_player = player
 
     first_node = player.root.select_leaf()
@@ -39,13 +41,18 @@ def play_select_move():
     while g_player.root.N < current_readouts + readouts and time.time() - start < FLAGS.time_per_move:
         g_player.tree_search()
     move = g_player.pick_move()
+    g_player.play_move(move)
+    grm = params['BNF_GRAMMAR']
+    ind_tree = Tree(str(grm.start_rule["symbol"]), None)
+    output = _generate_tree(ind_tree, [], g_player.root.position.state)
+    print(output)
+    print(g_player.root.position.state)
     if g_player.root.position._output is not None:
         print("".join(g_player.root.position._output))
         r = g_player.root.position.current
         while r is not None and r.parent is not None:
             print(r)
             r = r.parent
-    g_player.play_move(move)
 
 
     return move
