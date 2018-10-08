@@ -43,8 +43,8 @@ def play_select_move():
         print("".join(g_player.root.position._output))
         r = g_player.root.position.current
         while r is not None and r.parent is not None:
+            print(r)
             r = r.parent
-        print(r)
     g_player.play_move(move)
 
 

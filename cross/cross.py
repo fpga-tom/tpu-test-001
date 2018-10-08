@@ -13,7 +13,7 @@ from cross.deepxor import num_actions
 import tensorflow as tf
 
 method="random"
-max_depth=40
+max_depth=100
 PositionFactory.set_factory('pony', PonyGEPositionFactory(method=method,max_depth=max_depth))
 ModelFactory.set_factory('recurrent', RecurrentModelFactory(num_actions))
 

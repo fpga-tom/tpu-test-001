@@ -18,13 +18,13 @@ tf.flags.DEFINE_integer("seq_max_len", default=20, help="maximum state len")
 FLAGS = tf.flags.FLAGS
 
 # maximum number of syntax tree nodes
-num_tree_nodes = 28
-num_productions = 27
+num_tree_nodes = 1
+num_productions = 1
 #num_choices = 25
 solved = np.zeros([FLAGS.seq_max_len*num_tree_nodes*num_productions])
 action_list = [ ]
 len_solved = len(solved)
-num_actions = num_productions
+num_actions = FLAGS.seq_max_len #num_productions
 
 validation = [
         [0 for x in range(0, len_solved)],
@@ -32,7 +32,7 @@ validation = [
 
 def apply_action(state, action):
     state = np.array([x for x in state])
-    state[action] = 1.0
+    state[action[0]] = action[1]
     return state
 
 def apply_action_reverse(state, action):

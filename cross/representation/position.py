@@ -96,7 +96,7 @@ class PonyGEPosition(cross.deepxor.Position):
                     pos.trees.append(tree.children[-1])
 
                     idx = [k for k, v in params['BNF_GRAMMAR'].rules.items()].index(symbol["symbol"])
-                    pos.state = apply_action(pos.state, pos.n * num_tree_nodes * num_productions + pos.n * num_productions + idx)
+                    pos.state = apply_action(pos.state, (pos.n , idx))
 
             self._output = self.output
 
