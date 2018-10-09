@@ -73,11 +73,11 @@ class PonyGEPosition(cross.deepxor.Position):
     def _generate_tree(self, pos, tree, output, selected_production, undecided_trees):
         productions = params['BNF_GRAMMAR'].rules[tree.root]
         if selected_production == -1:
-            if  len(productions['choices']) == 1:
-                selected_production = 0
-            else:
-                undecided_trees.append(tree)
-                return output, undecided_trees
+#            if  len(productions['choices']) == 1:
+#                selected_production = 0
+#            else:
+             undecided_trees.append(tree)
+             return output, undecided_trees
 
         chosen_prod = productions['choices'][selected_production]
         tree.children = []

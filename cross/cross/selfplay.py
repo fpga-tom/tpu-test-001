@@ -1,7 +1,7 @@
 import tensorflow as tf
 from cross.strategies import MCTSPlayer
 import cross.dual_net
-from cross.deepxor import state_diff, _generate_tree
+from cross.deepxor import state_diff, _generate_tree, generate_output
 from cross.utilities import PositionFactory
 from algorithm.parameters import params
 from representation.tree import Tree
@@ -44,9 +44,9 @@ def play_select_move():
     g_player.play_move(move)
     grm = params['BNF_GRAMMAR']
     ind_tree = Tree(str(grm.start_rule["symbol"]), None)
-    output = _generate_tree(ind_tree, [], g_player.root.position.state)
-    print(output)
     print(g_player.root.position.state)
+    output = generate_output(g_player.root.position.state)
+    print("".join(output))
     if g_player.root.position._output is not None:
         print("".join(g_player.root.position._output))
         r = g_player.root.position.current

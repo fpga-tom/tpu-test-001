@@ -40,13 +40,18 @@ def apply_action(state, action):
 def apply_action_reverse(state, action):
     return np.cross(action_list[action], state)
 
-def _generate_tree(tree, output, selected_production):
-    if selected_production[0] == -1:
-        return output
+def _generate_tree(tree, output, selected_production, unexpanded):
     productions = params['BNF_GRAMMAR'].rules[tree.root]
+    if selected_production == -1:
+#        if len(productions['choices']) == 1:
+#            selected_production = 0
+#        else:
+        unexpanded.append(tree)
+        return output, unexpanded
 
-    chosen_prod = productions['choices'][int(selected_production[0])]
+    chosen_prod = productions['choices'][int(selected_production)]
     tree.children = []
+#    print(chosen_prod)
 
     for symbol in chosen_prod['choice']:
         # Iterate over all symbols in the chosen production.
@@ -61,15 +66,31 @@ def _generate_tree(tree, output, selected_production):
             # The symbol is a non-terminal. Append new node to children.
             tree.children.append(Tree(symbol["symbol"], tree))
 
-            output = _generate_tree(tree.children[-1], output, selected_production[1:])
+            output, unexpanded = _generate_tree(tree.children[-1], output, -1, unexpanded)
 
-    return output
+    return output, unexpanded
 
-def reward(state):
+def generate_output(state):
+#    print(state)
     grm = params['BNF_GRAMMAR']
     ind_tree = Tree(str(grm.start_rule["symbol"]), None)
-    print(state)
-    output = _generate_tree(ind_tree, [], state)
+    unexpanded = []
+    output = []
+    tree = ind_tree
+    s = copy.copy(state)
+    idx = 0
+    while True:
+        output, unexpanded = _generate_tree(tree, output, s[idx], unexpanded)
+        idx += 1
+        tree = unexpanded.pop(0) if unexpanded else None
+        if tree is None or s[idx] == -1:
+            break
+    return output
+
+
+def reward(state):
+
+    output = generate_output(state)
 
     with open('/tmp/program.bf', 'w') as out:
         out.write("".join(output))
