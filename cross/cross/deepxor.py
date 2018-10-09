@@ -68,6 +68,7 @@ def _generate_tree(tree, output, selected_production):
 def reward(state):
     grm = params['BNF_GRAMMAR']
     ind_tree = Tree(str(grm.start_rule["symbol"]), None)
+    print(state)
     output = _generate_tree(ind_tree, [], state)
 
     with open('/tmp/program.bf', 'w') as out:

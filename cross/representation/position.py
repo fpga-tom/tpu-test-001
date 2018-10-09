@@ -68,6 +68,7 @@ class PonyGEPosition(cross.deepxor.Position):
         self.depth_limit = 90
         self.current = None
         self.num_nodes = 0
+        self.undecided_trees = []
 
     def _generate_tree(self, pos, tree, output, selected_production, undecided_trees):
         productions = params['BNF_GRAMMAR'].rules[tree.root]
@@ -105,8 +106,8 @@ class PonyGEPosition(cross.deepxor.Position):
         pos = copy.deepcopy(self)
 
         if pos.current:
-            pos.output, trees = self._generate_tree(pos, pos.current, pos.output, c, [])
-            pos.current = trees.pop(0) if trees else None
+            pos.output, pos.undecided_trees = self._generate_tree(pos, pos.current, pos.output, c, pos.undecided_trees)
+            pos.current = pos.undecided_trees.pop(0) if pos.undecided_trees else None
 
         pos.n += 1
         return pos
