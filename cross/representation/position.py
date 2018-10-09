@@ -63,9 +63,9 @@ class PonyGEPosition(cross.deepxor.Position):
         self.output = []
         self._output = None
         self.nodes = 0
-        self.max_depth = 10
+        self.max_depth = 20
         self.depth = 0
-        self.depth_limit = 90
+        self.depth_limit = 20
         self.current = None
         self.num_nodes = 0
         self.undecided_trees = []

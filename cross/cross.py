@@ -16,7 +16,7 @@ from cross.deepxor import num_actions
 FLAGS = tf.flags.FLAGS
 
 method="random"
-max_depth=100
+max_depth=300
 PositionFactory.set_factory('pony', PonyGEPositionFactory(method=method,max_depth=max_depth))
 ModelFactory.set_factory('recurrent', RecurrentModelFactory(num_actions))
 

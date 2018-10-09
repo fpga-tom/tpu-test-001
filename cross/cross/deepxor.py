@@ -8,6 +8,7 @@ from tensorflow.python.keras import layers
 from algorithm.parameters import params
 from representation.derivation import legal_productions, generate_tree
 from representation.tree import Tree
+import brainfuck as bf
 
 tf.flags.DEFINE_float("l2", default=1e-4, help="l2 regularization")
 tf.flags.DEFINE_integer("input_layer", default=4096, help="input layer size")
@@ -26,7 +27,7 @@ num_productions = 1
 solved = np.zeros([FLAGS.seq_max_len*num_tree_nodes*num_productions])
 action_list = [ ]
 len_solved = len(solved)
-num_actions = FLAGS.seq_max_len #num_productions
+num_actions = 30 # FLAGS.seq_max_len #num_productions
 
 validation = [
         [0 for x in range(0, len_solved)],
@@ -57,18 +58,24 @@ def _generate_tree(tree, output, selected_production, unexpanded):
         # Iterate over all symbols in the chosen production.
         if symbol["type"] == "T":
             # The symbol is a terminal. Append new node to children.
-            tree.children.append(Tree(symbol["symbol"], tree))
+            tree.children.append(Tree(symbol["symbol"], tree, type=symbol["type"]))
             
             # Append the terminal to the output list.
             output.append(symbol["symbol"])
         
         elif symbol["type"] == "NT":
             # The symbol is a non-terminal. Append new node to children.
-            tree.children.append(Tree(symbol["symbol"], tree))
+            tree.children.append(Tree(symbol["symbol"], tree, type=symbol["type"]))
 
             output, unexpanded = _generate_tree(tree.children[-1], output, -1, unexpanded)
 
     return output, unexpanded
+
+def walk_tree(tree, output):
+    for t in tree.children:
+        walk_tree(t, output)
+    output += tree.root if tree.type == "T" else []
+    return output
 
 def generate_output(state):
 #    print(state)
@@ -85,18 +92,24 @@ def generate_output(state):
         tree = unexpanded.pop(0) if unexpanded else None
         if tree is None or s[idx] == -1:
             break
-    return output
+    return walk_tree(ind_tree, []), ind_tree
 
 
 def reward(state):
 
-    output = generate_output(state)
+    output, _ = generate_output(state)
+#    print(output)
 
     with open('/tmp/program.bf', 'w') as out:
         out.write("".join(output))
 
     retval = os.system("./eval.sh")
 
+#    code="".join(output)
+#    retval = bf.bf(code,0, len(code)-1, [0 for x in range(0,9999)], 0, max_steps=100)
+
+#    print(retval)
+#    return retval
     if retval == 0:
         return 1
     else:

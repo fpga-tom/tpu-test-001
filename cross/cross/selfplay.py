@@ -1,7 +1,7 @@
 import tensorflow as tf
 from cross.strategies import MCTSPlayer
 import cross.dual_net
-from cross.deepxor import state_diff, _generate_tree, generate_output
+from cross.deepxor import state_diff, _generate_tree, generate_output, reward
 from cross.utilities import PositionFactory
 from algorithm.parameters import params
 from representation.tree import Tree
@@ -9,7 +9,7 @@ import time
 import numpy as np
 
 #tf.flags.DEFINE_string("model_dir", default=None, help="Estimator model dir")
-tf.flags.DEFINE_integer("time_per_move", default=5, help="Thinking time per move")
+tf.flags.DEFINE_integer("time_per_move", default=20, help="Thinking time per move")
 
 FLAGS = tf.flags.FLAGS
 import sys
@@ -38,21 +38,15 @@ def play_select_move():
     readouts = FLAGS.num_readouts
     current_readouts = g_player.root.N
     start = time.time()
+#    g_player.root.inject_noise()
     while g_player.root.N < current_readouts + readouts and time.time() - start < FLAGS.time_per_move:
         g_player.tree_search()
     move = g_player.pick_move()
     g_player.play_move(move)
-    grm = params['BNF_GRAMMAR']
-    ind_tree = Tree(str(grm.start_rule["symbol"]), None)
     print(g_player.root.position.state)
-    output = generate_output(g_player.root.position.state)
-    print("".join(output))
-    if g_player.root.position._output is not None:
-        print("".join(g_player.root.position._output))
-        r = g_player.root.position.current
-        while r is not None and r.parent is not None:
-            print(r)
-            r = r.parent
+    output, tree = generate_output(g_player.root.position.state)
+    print("".join(output), reward(g_player.root.position.state))
+    print(tree)
 
 
     return move

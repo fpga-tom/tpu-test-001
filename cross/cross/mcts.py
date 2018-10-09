@@ -14,11 +14,11 @@ flags.DEFINE_float('c_puct', 0.96,
 
 flags.DEFINE_float('dirichlet_noise_alpha', 0.03 * 361 / (num_actions ** 2),
                    'Concentrated-ness of the noise being injected into priors.')
-flags.register_validator('dirichlet_noise_alpha', lambda x: 0 <= x < 3)
+flags.register_validator('dirichlet_noise_alpha', lambda x: 0 <= x < 1)
 
 flags.DEFINE_float('dirichlet_noise_weight', 0.25,
                    'How much to weight the priors vs. dirichlet noise when mixing')
-flags.register_validator('dirichlet_noise_weight', lambda x: 0 <= x < 3)
+flags.register_validator('dirichlet_noise_weight', lambda x: 0 <= x < 1)
 
 FLAGS = flags.FLAGS
 

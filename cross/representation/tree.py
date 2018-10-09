@@ -3,7 +3,7 @@ from algorithm.parameters import params
 
 class Tree:
 
-    def __init__(self, expr, parent):
+    def __init__(self, expr, parent, type="NT"):
         """
         Initialise an instance of the tree class.
         
@@ -18,6 +18,7 @@ class Tree:
         self.root = expr
         self.children = []
         self.snippet = None
+        self.type = type
 
     def __str__(self):
         """

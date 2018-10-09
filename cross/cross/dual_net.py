@@ -99,5 +99,5 @@ class Network():
 
 
     def run_many(self, positions):
-        return zip(*[self.predict(p.state) for p in positions])
+        return zip(*[self.predict([x + 1 for x in p.state]) for p in positions])
     

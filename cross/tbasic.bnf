@@ -12,7 +12,7 @@
 		RUN|
 		END
 <expr_list> ::= <string_expr>|<expr_list>,<string_expr>
-<string_expr> ::= '<string>'|<expression>
+<string_expr> ::= <string>|<expression>
 <var_list> ::= <var>|<var_list>,<var>
 <expression_atom> ::= + <term>|- <term>
 <expression> ::= <expression_atom>|<expression_atom> <expression>
