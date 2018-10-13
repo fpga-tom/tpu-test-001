@@ -1,77 +1,257 @@
-> program
-/ ''
-program = { form }
-form = definition | expression
+program ::= program-a
+program-a ::= ''
+           |  form program-a
+form ::= definition
+      |  expression
+definition ::= variable_definition
+            |  syntax_definition
+            |  '(begin' definition-a ')'
+            |  '(let-syntax' '(' definition-b ')' definition-c ')'
+            |  '(letrec-syntax' '(' definition-d ')' definition-e ')'
+            |  derived_definition
+variable_definition ::= '(define' variable expression ')'
+                     |  '(define' '(' variable variable_definition-a body ')'
+                     |  '(define' '(' variable variable_definition-b '.'
+                        variable ')' body ')'
+variable ::= identifier
+identifier ::= initial identifier-a
+            |  '+'
+            |  '-'
+            |  '...'
+initial ::= letter
+         |  '!'
+         |  '$'
+         |  '%'
+         |  '&'
+         |  '*'
+         |  '/'
+         |  ':'
+         |  ''
+         |  '='
+         |  ''
+         |  '?'
+         |  '~'
+         |  '_'
+         |  '^'
+letter ::= 'a'
+        |  'b'
+        |  'c'
+        |  'd'
+        |  'e'
+        |  'f'
+        |  'g'
+        |  'h'
+        |  'i'
+        |  'j'
+        |  'k'
+        |  'l'
+        |  'm'
+        |  'n'
+        |  'o'
+        |  'p'
+        |  'q'
+        |  'r'
+        |  's'
+        |  't'
+        |  'u'
+        |  'v'
+        |  'x'
+        |  'y'
+        |  'z'
+identifier-a ::= ''
+              |  subsequent identifier-a
+subsequent ::= initial
+            |  digit
+            |  '.'
+            |  '+'
+            |  '-'
+digit ::= '0'
+       |  '1'
+       |  '2'
+       |  '3'
+       |  '4'
+       |  '5'
+       |  '6'
+       |  '7'
+       |  '8'
+       |  '9'
+expression ::= constant
+            |  variable
+            |  '(quote' datum ')'
+            |  "'" datum
+            |  '(lambda formals body ' )'
+            |  '(if' expression expression expression ')'
+            |  '(if' expression expression ')'
+            |  '(set!' variable expression ')'
+            |  application
+            |  '(let-syntax' '(' expression-a ')' expression expression-b ')'
+            |  '(letrec-syntax' '(' expression-c ')' expression expression-d ')'
+            |  derived_expression
+constant ::= boolean
+          |  number
+          |  character
+          |  string
+boolean ::= '#t'
+         |  '#f'
+number ::= num_10
+num_10 ::= prefix_10 complex_r
+prefix_10 ::= radix_10 exactness
+           |  exactness radix_10
+radix_10 ::= empty
+          |  '#d'
+empty ::= ''
+exactness ::= empty
+           |  '#i'
+           |  '#e'
+character ::= '#\' any_character
+           |  '#\newline'
+           |  '#\space'
+any_character ::= any_character_other
+               |  '\'
+               |  '"'
+any_character_other ::= letter
+                     |  digit
+                     |  '!'
+                     |  '@'
+                     |  '#'
+                     |  '$'
+                     |  '%'
+                     |  '^'
+                     |  '&'
+                     |  '*'
+                     |  '('
+                     |  ')'
+                     |  '-'
+                     |  '+'
+                     |  '='
+                     |  ','
+                     |  '.'
+string ::= '"' string-a '"'
+string-a ::= ''
+          |  string_character string-a
+string_character ::= '\"'
+                  |  '\\'
+                  |  any_character_other_than
+datum ::= boolean
+       |  number
+       |  character
+       |  string
+       |  symbol
+       |  list
+       |  vector
+symbol ::= identifier
+list ::= '(' list-a ')'
+      |  '(' datum list-b '.' datum ')'
+      |  abbreviation
+list-a ::= ''
+        |  datum list-a
+list-b ::= ''
+        |  datum list-b
+abbreviation ::= "'" datum
+              |  '`' datum
+              |  ',' datum
+              |  '.@' datum
+vector ::= '#(' vector-a ')'
+vector-a ::= ''
+          |  datum vector-a
+application ::= '(' expression application-a ')'
+application-a ::= ''
+               |  expression application-a
+expression-a ::= ''
+              |  syntax_binding expression-a
+syntax_binding ::= '(' keyword transformer_expression ')'
+keyword ::= identifier
+expression-b ::= ''
+              |  expression expression-b
+expression-c ::= ''
+              |  syntax_binding expression-c
+expression-d ::= ''
+              |  expression expression-d
+variable_definition-a ::= ''
+                       |  variable variable_definition-a
+body ::= body-a expression body-b
+body-a ::= ''
+        |  definition body-a
+body-b ::= ''
+        |  expression body-b
+variable_definition-b ::= ''
+                       |  variable variable_definition-b
+syntax_definition ::= '(define-syntax' keyword transformer_expression ')'
+definition-a ::= ''
+              |  definition definition-a
+definition-b ::= ''
+              |  syntax_binding definition-b
+definition-c ::= ''
+              |  definition definition-c
+definition-d ::= ''
+              |  syntax_binding definition-d
+definition-e ::= ''
+              |  definition definition-e
 
-definition = variable_definition
-		| syntax_definition
-		| '(begin' { definition } ')'
-		| '(let-syntax' '(' { syntax_binding } ')' { definition } ')'
-		| '(letrec-syntax' '(' { syntax_binding } ')' { definition } ')'
-		| derived_definition
+# terminals:   '' '(begin' ')' '(let-syntax' '(' '(letrec-syntax'
+#              derived_definition '(define' '.' '(define-syntax'
+#              transformer_expression '(quote' "'" '(lambda formals body ' )'
+#              '(if' '(set!' derived_expression '+' '-' '...' '!' '$' '%' '&'
+#              '*' '/' ':' '=' '?' '~' '_' '^' 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h'
+#              'i' 'j' 'k' 'l' 'm' 'n' 'o' 'p' 'q' 'r' 's' 't' 'u' 'v' 'x' 'y'
+#              'z' '0' '1' '2' '3' '4' '5' '6' '7' '8' '9' '@' '#' ',' '\' '"'
+#              '#t' '#f' '#\' '#\newline' '#\space' '\"' '\\'
+#              any_character_other_than '`' '.@' '#(' complex_r '#i' '#e' '#d'
 
-variable_definition = '(define' variable expression ')'
-			| '(define' '(' variable { variable } body ')'
-			| '(define' '(' variable { variable } '.' variable ')' body ')'
-
-variable = identifier
-body = { definition } expression { expression }
-syntax_definition = '(define-syntax' keyword transformer_expression ')'
-keyword = identifier
-syntax_binding = '(' keyword transformer_expression ')'
-
-expression = constant
-		| variable
-		| '(quote' datum ')' | "'" datum
-		| '(lambda formals body ')'
-		| '(if' expression expression expression ')' | '(if' expression expression ')'
-		| '(set!' variable expression ')'
-		| application
-		| '(let-syntax' '(' { syntax_binding } ')' expression { expression } ')'
-		| '(letrec-syntax' '(' { syntax_binding } ')' expression { expression } ')'
-		| derived_expression
-constant = boolean | number | character | string
-formals = variable | '(' { variable } ')' | '('  variable { variable } '.' variable ')'
-application = '(' expression { expression } ')'
-
-identifier = initial { subsequent } | '+' | '-' | '...'
-initial = letter | '!' | '$' | '%' | '&' | '*' | '/' | ':' | '' | '=' | '' | '?' | '~' | '_' | '^'
-subsequent = initial | digit | '.' | '+' | '-'
-letter = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'x' | 'y' | 'z'
-digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
-any_character_other = letter | digit | '!' | '@' | '#' | '$' | '%' | '^' | '&' | '*' | '(' | ')' | '-' | '+' | '=' | ',' | '.'
-any_character = any_character_other | '\' | '"'
-
-
-datum = boolean | number | character | string | symbol | list | vector
-boolean = '#t' | '#f'
-number = num_10 
-character = '#\' any_character | '#\newline' | '#\space'
-string = '"' { string_character } '"'
-string_character = '\"' | '\\' | any_character_other_than
-symbol = identifier
-list = '(' { datum } ')' | '(' datum { datum } '.' datum ')' | abbreviation
-abbreviation = "'" datum | '`' datum | ',' datum | '.@' datum
-vector = '#(' { datum } ')'
-
-num_10 = prefix_10 complex_r
-complex_10 = real_10 | real_10 '@' real_10
-		| real_10 '+' imag_10 | real_10 '.' imag_10
-		| '+' imag_10 | '-' imag_10
-imag_10 = 'i' | ureal_10 'i'
-real_10 = sign ureal_10
-ureal_10 = uinteger_10 | uinteger_10 '/' uinteger_10 | decimal_10
-uinteger_10 = digit_10 { digit_10 } { '#' }
-prefix_10 = radix_10 exactness | exactness radix_10
-decimal_10 = uinteger_10 exponent
-		| '.' digit_10 { digit_10 } { '#' } suffix
-		| digit_10 { digit_10 } '.' { digit_10 } { '#' } suffix
-		| digit_10 { digit_10 } '#' '.' { '#' } suffix
-suffix = empty | exponent
-exponent = exponent_marker sign digit_10 { digit_10 }
-exponent_marker = 'e' | 's' | 'f' | 'd' | 'l'
-sign = empty | '+' | '-'
-exactness = empty | '#i' | '#e'
-radix_10 = empty | '#d'
-digit_10 = digit
-empty = ''
+# unused productions
+formals ::= variable
+         |  '(' formals-a ')'
+         |  '(' variable formals-b '.' variable ')'
+complex_10 ::= real_10
+            |  real_10 '@' real_10
+            |  real_10 '+' imag_10
+            |  real_10 '.' imag_10
+            |  '+' imag_10
+            |  '-' imag_10
+real_10 ::= sign ureal_10
+imag_10 ::= 'i'
+         |  ureal_10 'i'
+ureal_10 ::= uinteger_10
+          |  uinteger_10 '/' uinteger_10
+          |  decimal_10
+sign ::= empty
+      |  '+'
+      |  '-'
+uinteger_10 ::= digit_10 uinteger_10-a uinteger_10-b
+decimal_10 ::= uinteger_10 exponent
+            |  '.' digit_10 decimal_10-a decimal_10-b suffix
+            |  digit_10 decimal_10-c '.' decimal_10-d decimal_10-e suffix
+            |  digit_10 decimal_10-f '#' '.' decimal_10-g suffix
+digit_10 ::= digit
+exponent ::= exponent_marker sign digit_10 exponent-a
+suffix ::= empty
+        |  exponent
+exponent_marker ::= 'e'
+                 |  's'
+                 |  'f'
+                 |  'd'
+                 |  'l'
+formals-a ::= ''
+           |  variable formals-a
+formals-b ::= ''
+           |  variable formals-b
+uinteger_10-a ::= ''
+               |  digit_10 uinteger_10-a
+uinteger_10-b ::= ''
+               |  '#' uinteger_10-b
+decimal_10-a ::= ''
+              |  digit_10 decimal_10-a
+decimal_10-b ::= ''
+              |  '#' decimal_10-b
+decimal_10-c ::= ''
+              |  digit_10 decimal_10-c
+decimal_10-d ::= ''
+              |  digit_10 decimal_10-d
+decimal_10-e ::= ''
+              |  '#' decimal_10-e
+decimal_10-f ::= ''
+              |  digit_10 decimal_10-f
+decimal_10-g ::= ''
+              |  '#' decimal_10-g
+exponent-a ::= ''
+            |  digit_10 exponent-a
