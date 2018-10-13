@@ -1,0 +1,72 @@
+<program> = { <form> }
+<form> = <definition> | <expression>
+
+<definition> = <variable_definition>
+		| <syntax_definition>
+		| '(begin' { <definition> } ')'
+		| '(let-syntax' '(' { <syntax_binding> } ')' { <definition> } ')'
+		| '(letrec-syntax' '(' { <syntax_binding> } ')' { <definition> } ')'
+		| <derived_definition>
+
+<variable_definition> = '(define' <variable> <expression> ')'
+			| '(define' '(' <variable> { <variable> } <body> ')'
+			| '(define' '(' <variable> { <variable> } '.' <variable> ')' <body> ')'
+
+<variable> = <identifier>
+<body> = { <definition> } <expression> { <expression> }
+<syntax_definition> = '(define-syntax' <keyword> <transformer_expression> ')'
+<keyword> = <identifier>
+<syntax_binding> = '(' <keyword> <transformer_expression> ')'
+
+<expression> = <constant>
+		| <variable>
+		| '(quote' <datum> ')' | "'" <datum>
+		| '(lambda <formals> <body> ')'
+		| '(if' <expression> <expression> <expression> ')' | '(if' <expression> <expression> ')'
+		| '(set!' <variable> <expression> ')'
+		| <application>
+		| '(let-syntax' '(' { <syntax_binding> } ')' <expression> { <expression> } ')'
+		| '(letrec-syntax' '(' { <syntax_binding> } ')' <expression> { <expression> } ')'
+		| <derived_expression>
+<constant> = <boolean> | <number> | <character> | <string>
+<formals> = <variable> | '(' { <variable> } ')' | '( <variable> { <variable> } . <variable> ')'
+<application> = '(' <expression> { <expression> } ')'
+
+<identifier> = <initial> { <subsequent> } | '+' | '-' | '...'
+<initial> = <letter> | '!' | '$' | '%' | '&' | '*' | '/' | ':' | '<' | '=' | '>' | '?' | '~' | '_' | '^'
+<subsequent> = <initial> | <digit> | '.' | '+' | '-'
+<letter> = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'x' | 'y' | 'z'
+<digit> = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+
+<datum> = <boolean> | <number> | <character> | <string> | <symbol> | <list> | <vector>
+<boolean> = '#t' | '#f'
+<number> = <num_10> 
+<character> = '#\' <any_character> | '#\newline' | '#\space'
+<string> = '"' { <string_character> } '"'
+<string_character> = '\"' | '\\' | <any_character_other_than>
+<symbol> = <identifier>
+<list> = '(' { <datum> } ')' | '(' <datum> { <datum> } '.' <datum> ')' | <abbreviation>
+<abbreviation> = '\'' <datum> | '`' <datum> | ',' <datum> | '.@' <datum>
+<vector> = '#(' { <datum> } ')'
+
+<num_10> = <prefix_10> <complex_r>
+<complex_10> = <real_10> | real_10 '@' <real_10>
+		| <real_10> '+' <imag_10> | <real_10> . <imag_10>
+		| '+' <imag_10> | '-' <imag_10>
+<imag_10> = 'i' | <ureal_10> 'i'
+<real_10> = <sign> <ureal_10>
+<ureal_10> = <uinteger_10> | <uinteger_10> '/' <uinteger_10> | <decimal_10>
+<uinteger_10> = <digit_10> { <digit_10> } { '#' }
+<prefix_10> = <radix_10> <exactness> | <exactness> <radix_10>
+<decimal_10> = <uninteger_10> <exponent>
+		| '.' <digit_10> { <digit_10> } { '#' } <suffix>
+		| <digit_10> { <digit_10> } '.' { <digit_10> } { '#' } <suffix>
+		| <digit_10> { <digit_10> } '#' '.' { '#' } <suffix>
+<suffix> = <empty> | <exponent>
+<exponent> = <exponent_marker> <sign> <digit_10> { <digit_10> }
+<exponent_marker> = 'e' | 's' | 'f' | 'd' | 'l'
+<sign> = <empty> | '+' | '-'
+<exactness> = <empty> | '#i' | '#e'
+<radix_10> = <empty> | '#d'
+<digit_10> = <digit>
+<empty> = ''
