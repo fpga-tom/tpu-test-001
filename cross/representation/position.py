@@ -63,7 +63,7 @@ class PonyGEPosition(cross.deepxor.Position):
         self.output = []
         self._output = None
         self.nodes = 0
-        self.max_depth = 20
+        self.max_depth = 5
         self.depth = 0
         self.depth_limit = 20
         self.current = None
@@ -88,14 +88,18 @@ class PonyGEPosition(cross.deepxor.Position):
             # Iterate over all symbols in the chosen production.
             if symbol["type"] == "T":
                 # The symbol is a terminal. Append new node to children.
-                tree.children.append(Tree(symbol["symbol"], tree))
+                tr=Tree(symbol["symbol"], tree)
+                tree.children.append(tr)
+                tr.depth = tree.depth + 1
                 
                 # Append the terminal to the output list.
                 output.append(symbol["symbol"])
             
             elif symbol["type"] == "NT":
                 # The symbol is a non-terminal. Append new node to children.
-                tree.children.append(Tree(symbol["symbol"], tree))
+                tr=Tree(symbol["symbol"], tree)
+                tree.children.append(tr)
+                tr.depth = tree.depth + 1
 
                 output, undecided_trees = self._generate_tree(pos, tree.children[-1], output, -1, undecided_trees)
 
@@ -120,7 +124,7 @@ class PonyGEPosition(cross.deepxor.Position):
         available_indices = np.zeros([num_actions])
         if self.current and self.current.root in params['BNF_GRAMMAR'].rules:
             productions = params['BNF_GRAMMAR'].rules[self.current.root]
-            remaining_depth = self.max_depth - self.n
+            remaining_depth = self.max_depth - self.current.depth
             available = legal_productions(self.method, remaining_depth, self.current.root,
                                           productions['choices'])
             for chosen_prod in available:

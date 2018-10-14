@@ -17,7 +17,7 @@ FLAGS = tf.flags.FLAGS
 
 method="random"
 max_depth=300
-PositionFactory.set_factory('pony', PonyGEPositionFactory(method=method,max_depth=max_depth))
+PositionFactory.set_factory('pony', PonyGEPositionFactory(method=method,max_depth=7))
 ModelFactory.set_factory('recurrent', RecurrentModelFactory(num_actions))
 
 grm = Grammar(FLAGS.grammar)
